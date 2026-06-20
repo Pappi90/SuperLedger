@@ -1,0 +1,90 @@
+:root {
+  /* Palette — "ink & ledger": warm off-white paper, deep ink, a single
+     confident green for gains, clay-red for drag/loss, brass accent */
+  --paper: #f6f3ec;
+  --paper-raised: #fffdf8;
+  --ink: #1a1916;
+  --ink-soft: #57534a;
+  --ink-faint: #8c887d;
+  --rule: #e0dccf;
+  --rule-strong: #cdc7b6;
+  --green: #1f7a52;
+  --green-soft: #e3efe6;
+  --clay: #b4472d;
+  --clay-soft: #f3e2db;
+  --brass: #a8842c;
+  --brass-soft: #f0e7cf;
+  --ink-invert: #f6f3ec;
+
+  --maxw: 980px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", "Georgia", serif;
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.mono {
+  font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-feature-settings: "tnum" 1;
+}
+
+h1, h2, h3 { font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+.eyebrow {
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+a { color: inherit; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--rule-strong);
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ink);
+  cursor: pointer;
+  border: 3px solid var(--paper-raised);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--ink); cursor: pointer;
+  border: 3px solid var(--paper-raised);
+}
+
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
