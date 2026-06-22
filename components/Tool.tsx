@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { funds, benchmark, percentileRank, fundReturns, fundFees, formatFull } from "@/lib/super";
+import { useState, useMemo, useEffect } from "react";
+import { funds, benchmark, percentileRank, fundFiguresAtAge, fundReturns, fundNetReturns, fundFees, formatFull } from "@/lib/super";
 import PercentileBar from "./PercentileBar";
 import Projection from "./Projection";
 import BalanceBenchmark from "./BalanceBenchmark";
@@ -14,20 +14,27 @@ export default function Tool() {
   const [salary, setSalary] = useState(90000);
   const [retireAge, setRetireAge] = useState(67);
   const [extra, setExtra] = useState(0);
+  const [employerRate, setEmployerRate] = useState(12);
+  const [inflation, setInflation] = useState(2.5);
   const [fundIdx, setFundIdx] = useState<number>(-1);
   const [manualReturn, setManualReturn] = useState(7.5);
   const [manualFee, setManualFee] = useState(0.9);
 
   const selected = fundIdx >= 0 ? funds[fundIdx] : null;
-  const myReturn = selected?.nir5yr ?? manualReturn;
-  const myFee = selected?.totalFee50k ?? manualFee;
+  const ageFigures = selected ? fundFiguresAtAge(selected, age) : null;
+  const myReturn = ageFigures?.nir5yr ?? selected?.nir5yr ?? manualReturn;
+  const myFee = ageFigures?.totalFee50k ?? selected?.totalFee50k ?? manualFee;
+  // All-in net return (after investment AND admin fees). For a manually-entered
+  // fund we approximate it as the entered return minus the admin portion of the fee.
+  const myNetReturn = ageFigures?.net5yr ?? selected?.net5yr ?? Math.max(0, manualReturn - manualFee);
 
   const returnPct = useMemo(() => percentileRank(myReturn, fundReturns(), true), [myReturn]);
   const feePct = useMemo(() => percentileRank(myFee, fundFees(), false), [myFee]);
+  const netPct = useMemo(() => percentileRank(myNetReturn, fundNetReturns(), true), [myNetReturn]);
 
-  // net return used for projection = gross net investment return minus admin portion already in fee figure.
-  // NIR is net of investment fees; we subtract the total fee to be conservative for projection.
-  const netForProjection = Math.max(0, myReturn - Math.max(0, myFee - 0.3));
+  // Use the true all-in net return (after all fees) for the projection — this is
+  // APRA's representative-member figure, consistent with the headline metric above.
+  const netForProjection = myNetReturn;
 
   // lifetime fee drag vs cheapest quartile fund
   const cheapFee = benchmark.totalFee50k.p25;
@@ -37,23 +44,24 @@ export default function Tool() {
     // rough: extra fee % applied to average balance over time
     let b = balance, drag = 0;
     const r = netForProjection / 100;
-    const sg = salary * 0.12;
+    const sg = salary * (employerRate / 100);
     for (let y = 0; y < years; y++) {
       drag += b * (feeGapAnnual / 100);
       b = b * (1 + r) + sg + extra * 12;
     }
     return Math.round(drag);
-  }, [balance, netForProjection, feeGapAnnual, years, salary, extra]);
+  }, [balance, netForProjection, feeGapAnnual, years, salary, extra, employerRate]);
 
   return (
     <div>
       {/* Inputs */}
       <div className="grid-inputs">
-        <Field label="Your age" value={age} onChange={setAge} min={18} max={67} suffix="" />
-        <Field label="Current balance" value={balance} onChange={setBalance} min={0} max={1000000} step={5000} money />
-        <Field label="Annual salary" value={salary} onChange={setSalary} min={30000} max={400000} step={5000} money />
+        <Field label="Your age" value={age} onChange={setAge} min={18} max={75} suffix="" />
+        <Field label="Current balance" value={balance} onChange={setBalance} min={0} max={1000000} step={5000} money allowOver />
+        <Field label="Annual salary" value={salary} onChange={setSalary} min={30000} max={400000} step={5000} money allowOver />
         <Field label="Retire at" value={retireAge} onChange={setRetireAge} min={55} max={70} suffix="" />
-        <Field label="Extra contribution / month" value={extra} onChange={setExtra} min={0} max={2000} step={50} money />
+        <Field label="Employer contribution" value={employerRate} onChange={setEmployerRate} min={12} max={20} step={0.5} suffix="%" />
+        <Field label="Extra contribution / month" value={extra} onChange={setExtra} min={0} max={2000} step={50} money allowOver />
       </div>
 
       {/* Fund selector */}
@@ -91,7 +99,21 @@ export default function Tool() {
           </p>
 
           <PercentileBar
-            label="5-year net return"
+            label="Net return after all fees (5yr)"
+            value={myNetReturn}
+            min={benchmark.net5yr.min}
+            max={benchmark.net5yr.max}
+            median={benchmark.net5yr.median}
+            percentile={netPct}
+            higherIsBetter
+          />
+          <p style={{ fontSize: 12, color: "var(--ink-faint)", margin: "-16px 0 24px", lineHeight: 1.5 }}>
+            The bottom line: what your fund actually returned after both investment and admin fees —
+            APRA&apos;s representative-member figure. This is the number that matters most.
+          </p>
+
+          <PercentileBar
+            label="Investment return before admin fees (5yr)"
             value={myReturn}
             min={benchmark.nir5yr.min}
             max={benchmark.nir5yr.max}
@@ -119,12 +141,21 @@ export default function Tool() {
               {selected.performanceTest === "Pass" ? "✓" : "✕"} {selected.performanceTest === "Pass" ? "Passed" : "Failed"} APRA's official performance test
             </div>
           )}
+
+          {ageFigures?.isLifecycle && (
+            <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 10, lineHeight: 1.5 }}>
+              This is a lifecycle fund — figures shown are for your life stage ({ageFigures.stageLabel}),
+              since the fund adjusts its investment mix as you age.
+            </p>
+          )}
         </div>
 
         <div className="card">
           <h3 style={{ fontSize: 19, marginBottom: 6 }}>Your retirement outlook</h3>
           <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 22 }}>
-            Assumes 12% employer contributions on your salary
+            {employerRate > 12
+              ? `Based on your ${employerRate}% employer contributions — dashed line shows the 12% minimum`
+              : "Assumes the 12% Super Guarantee on your salary"}
           </p>
           <Projection
             balance={balance}
@@ -133,6 +164,9 @@ export default function Tool() {
             netReturn={netForProjection}
             extraMonthly={extra}
             salaryAnnual={salary}
+            employerRate={employerRate}
+            inflation={inflation}
+            onInflationChange={setInflation}
           />
         </div>
       </div>
@@ -154,10 +188,13 @@ export default function Tool() {
       )}
 
       <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 28, lineHeight: 1.6 }}>
-        General information only, not financial advice. Figures are estimates based on APRA's
-        Comprehensive Product Performance Package (MySuper, 30 June 2025) and simplified compounding
-        assumptions. Past performance does not predict future returns. Net return used for projections
-        is approximate. Consider the fund&apos;s PDS and your own circumstances, or speak to a licensed adviser.
+        General information only, not financial advice. Returns shown are APRA&apos;s published net
+        figures (the headline metric is the all-in net return after both investment and admin fees,
+        for a representative $50,000 member). Projections use simplified compounding and assume a 12%
+        Super Guarantee rate; they don&apos;t account for tax, insurance premiums, or future contribution
+        changes. Past performance does not predict future returns. Based on APRA&apos;s Comprehensive
+        Product Performance Package (MySuper, 30 June 2025). Consider the fund&apos;s PDS and your own
+        circumstances, or speak to a licensed adviser.
       </p>
 
       <style>{`
@@ -172,21 +209,61 @@ export default function Tool() {
 }
 
 function Field({
-  label, value, onChange, min, max, step = 1, money = false, suffix = "",
+  label, value, onChange, min, max, step = 1, money = false, suffix = "", allowOver = false,
 }: {
   label: string; value: number; onChange: (n: number) => void;
-  min: number; max: number; step?: number; money?: boolean; suffix?: string;
+  min: number; max: number; step?: number; money?: boolean; suffix?: string; allowOver?: boolean;
 }) {
+  const [text, setText] = useState<string>(String(value));
+
+  // keep the text box in sync when the slider (or external state) moves
+  useEffect(() => { setText(money ? fmt(value) : String(value)); }, [value, money]);
+
+  const commit = (raw: string) => {
+    const cleaned = raw.replace(/[^0-9.]/g, "");
+    let n = parseFloat(cleaned);
+    if (isNaN(n)) n = min;
+    // typed values may exceed the slider's max when allowOver (e.g. balances over $1M)
+    const ceiling = allowOver ? Number.MAX_SAFE_INTEGER : max;
+    n = Math.max(min, Math.min(ceiling, n));
+    onChange(n);
+    setText(money ? fmt(n) : String(n));
+  };
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 10 }}>
         <label style={{ fontSize: 14, color: "var(--ink-soft)" }}>{label}</label>
-        <span className="mono" style={{ fontSize: 15, fontWeight: 600 }}>
-          {money ? "$" + fmt(value) : value}{suffix}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {money && <span className="mono" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-soft)" }}>$</span>}
+          <input
+            type="text"
+            inputMode="decimal"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onFocus={(e) => e.target.select()}
+            onBlur={(e) => commit(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+            aria-label={label}
+            className="mono"
+            style={{
+              width: money ? 86 : 64, textAlign: "right", fontSize: 15, fontWeight: 600,
+              border: "1px solid transparent", borderRadius: 6, padding: "2px 6px",
+              background: "transparent", color: "var(--ink)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--rule-strong)")}
+            onMouseLeave={(e) => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.borderColor = "transparent"; }}
+          />
+          {suffix && <span className="mono" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-soft)" }}>{suffix}</span>}
+        </div>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value}
+      <input type="range" min={min} max={max} step={step} value={Math.min(value, max)}
         onChange={(e) => onChange(Number(e.target.value))} />
+      {value > max && (
+        <div style={{ fontSize: 11, color: "var(--ink-faint)", marginTop: 4 }}>
+          Typed value above slider range — using {money ? "$" + fmt(value) : value}{suffix}
+        </div>
+      )}
     </div>
   );
 }

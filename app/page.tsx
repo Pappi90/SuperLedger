@@ -13,7 +13,7 @@ export default function Home() {
           <h1 className="hero-title">
             Your super is quietly<br />
             <span className="ital">winning or losing</span> you<br />
-            a house deposit.
+            hundreds of thousands of dollars.
           </h1>
           <p className="hero-sub">
             Most Australians never check. Enter your details below and see exactly where your
@@ -46,7 +46,7 @@ export default function Home() {
 
       <style>{`
         .hero { padding: 72px 0 56px; border-bottom: 1px solid var(--rule); }
-        .hero-title { font-size: clamp(34px, 6vw, 60px); margin: 18px 0 24px; max-width: 16ch; }
+        .hero-title { font-size: clamp(34px, 6vw, 60px); margin: 18px 0 24px; max-width: 22ch; }
         .ital { font-style: italic; color: var(--green); }
         .hero-sub { font-size: 19px; color: var(--ink-soft); max-width: 56ch; line-height: 1.6; }
         .hero-stats { display: flex; gap: 40px; margin-top: 40px; flex-wrap: wrap; }

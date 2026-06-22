@@ -1,5 +1,12 @@
 import data from "./funds.json";
 
+export type LifecycleStage = {
+  ageFrom: number; ageTo: number; growthAllocation: number | null;
+  nir10yr: number | null; nir7yr: number | null; nir5yr: number | null; nir3yr: number | null;
+  net10yr: number | null; net7yr: number | null; net5yr: number | null; net3yr: number | null;
+  totalFee10k: number | null; totalFee50k: number | null; totalFee100k: number | null; totalFee250k: number | null;
+};
+
 export type Fund = {
   trustee: string;
   fund: string;
@@ -13,19 +20,39 @@ export type Fund = {
   nir7yr: number | null;
   nir5yr: number | null;
   nir3yr: number | null;
+  net10yr: number | null;
+  net7yr: number | null;
+  net5yr: number | null;
+  net3yr: number | null;
   totalFee10k: number | null;
   totalFee50k: number | null;
   totalFee100k: number | null;
   totalFee250k: number | null;
+  stages: LifecycleStage[] | null;
 };
+
+// For a lifecycle fund, return the stage matching the user's age (or the
+// headline/youngest stage as fallback). For single-strategy, returns the fund's
+// own figures. Use this everywhere a user's age-specific return/fee is needed.
+export function fundFiguresAtAge(fund: Fund, age: number): {
+  nir5yr: number | null; net5yr: number | null; totalFee50k: number | null; isLifecycle: boolean; stageLabel: string | null;
+} {
+  if (fund.strategy !== "Lifecycle" || !fund.stages || fund.stages.length === 0) {
+    return { nir5yr: fund.nir5yr, net5yr: fund.net5yr, totalFee50k: fund.totalFee50k, isLifecycle: false, stageLabel: null };
+  }
+  let stage = fund.stages.find((s) => age >= s.ageFrom && age <= s.ageTo);
+  if (!stage) stage = fund.stages[0];
+  const label = stage.ageTo >= 200 ? `age ${stage.ageFrom}+` : `age ${stage.ageFrom}–${stage.ageTo}`;
+  return { nir5yr: stage.nir5yr, net5yr: stage.net5yr, totalFee50k: stage.totalFee50k, isLifecycle: true, stageLabel: label };
+}
 
 export type Stats = {
   min: number; p25: number; median: number; p75: number; max: number; mean: number;
 };
 
 export type Benchmark = {
-  nir5yr: Stats; nir3yr: Stats; nir10yr: Stats; totalFee50k: Stats;
-  count: number; asAt: string; source: string;
+  nir5yr: Stats; net5yr: Stats; totalFee50k: Stats;
+  count: number; asAt: string; source: string; note?: string;
 };
 
 export const funds: Fund[] = data.funds as Fund[];
@@ -39,11 +66,21 @@ export function percentileRank(value: number, values: number[], higherIsBetter =
 }
 
 export function fundReturns(): number[] {
-  return funds.map((f) => f.nir5yr).filter((v): v is number => v !== null);
+  return funds
+    .map((f) => fundFiguresAtAge(f, 40).nir5yr)
+    .filter((v): v is number => v !== null);
+}
+
+export function fundNetReturns(): number[] {
+  return funds
+    .map((f) => fundFiguresAtAge(f, 40).net5yr)
+    .filter((v): v is number => v !== null);
 }
 
 export function fundFees(): number[] {
-  return funds.map((f) => f.totalFee50k).filter((v): v is number => v !== null);
+  return funds
+    .map((f) => fundFiguresAtAge(f, 40).totalFee50k)
+    .filter((v): v is number => v !== null);
 }
 
 // Compound projection: balance forward with annual net return + monthly contributions
@@ -166,3 +203,32 @@ export function balancePercentile(balance: number, age: number): {
   const percentile = Math.max(1, Math.min(99, Math.round((below / total) * 100)));
   return { percentile, topPct: 100 - percentile, ageLabel: band.age, p50: band.p50 };
 }
+
+// ── Inflation / real-dollar helpers ─────────────────────────────
+// RBA targets 2-3% over the medium term; 2.5% midpoint is the sensible
+// default for a multi-decade projection. Long-run avg since 1901 ~4.8%,
+// recent multi-year avg ~2.8%, current (Apr 2026) ~4.2%.
+export const INFLATION_ANCHORS = {
+  rbaMidpoint: 2.5,
+  recentAverage: 2.8,
+  longTermAverage: 4.8,
+  current: 4.2,
+};
+
+// Discount a future (nominal) sum back to today's purchasing power.
+export function toTodaysDollars(futureValue: number, inflationPct: number, years: number): number {
+  return Math.round(futureValue / Math.pow(1 + inflationPct / 100, years));
+}
+
+// What a thing costing `priceToday` will cost in `years`, at this inflation rate.
+export function futurePrice(priceToday: number, inflationPct: number, years: number): number {
+  return priceToday * Math.pow(1 + inflationPct / 100, years);
+}
+
+// Everyday items for the tangible "what it'll buy" illustration (today's prices, AUD).
+export const EVERYDAY_ITEMS = [
+  { label: "Weekly grocery shop", price: 200, icon: "🛒" },
+  { label: "Litre of petrol", price: 2, icon: "⛽" },
+  { label: "Coffee", price: 5.5, icon: "☕" },
+  { label: "Loaf of bread", price: 4.5, icon: "🍞" },
+];
