@@ -137,16 +137,20 @@ export function ageBandFor(age: number): AgeBand {
 
 // How a balance compares to the median for that age band.
 // Returns the ratio and a plain-English standing.
-export function balanceStanding(balance: number, age: number): {
-  band: AgeBand; median: number; ratio: number; aheadPct: number; verified: boolean;
+export type Gender = "male" | "female" | "all";
+
+export function balanceStanding(balance: number, age: number, gender: Gender = "all"): {
+  band: AgeBand; median: number; ratio: number; aheadPct: number; verified: boolean; genderUsed: Gender;
 } {
   const band = ageBandFor(age);
-  const median = band.median;
+  // Pick the gender-specific median when available, else fall back to combined
+  let median = band.median;
+  let genderUsed: Gender = "all";
+  if (gender === "male" && band.medianMale != null) { median = band.medianMale; genderUsed = "male"; }
+  else if (gender === "female" && band.medianFemale != null) { median = band.medianFemale; genderUsed = "female"; }
   const ratio = median > 0 ? balance / median : 1;
-  // crude but honest: express how far above/below the median midpoint they sit,
-  // capped to a sensible 0-99 display range
   const aheadPct = Math.max(1, Math.min(99, Math.round(50 * ratio)));
-  return { band, median, ratio, aheadPct, verified: band.verified && atoBalances.verified };
+  return { band, median, ratio, aheadPct, verified: band.verified && atoBalances.verified, genderUsed };
 }
 
 // ── Real percentile bands from ATO Table 22 ─────────────────────

@@ -16,6 +16,7 @@ export default function Tool() {
   const [extra, setExtra] = useState(0);
   const [employerRate, setEmployerRate] = useState(12);
   const [inflation, setInflation] = useState(2.5);
+  const [gender, setGender] = useState<"male" | "female" | "all">("all");
   const [fundIdx, setFundIdx] = useState<number>(-1);
   const [manualReturn, setManualReturn] = useState(7.5);
   const [manualFee, setManualFee] = useState(0.9);
@@ -58,10 +59,38 @@ export default function Tool() {
       <div className="grid-inputs">
         <Field label="Your age" value={age} onChange={setAge} min={18} max={75} suffix="" />
         <Field label="Current balance" value={balance} onChange={setBalance} min={0} max={1000000} step={5000} money allowOver />
-        <Field label="Annual salary" value={salary} onChange={setSalary} min={30000} max={400000} step={5000} money allowOver />
+        <Field label="Annual salary" value={salary} onChange={setSalary} min={30000} max={400000} step={5000} money allowOver
+          tooltip="Use your regular before-tax earnings (your base pay plus regular commissions and allowances). Super is legally paid on 'ordinary time earnings', which generally excludes overtime and one-off bonuses." />
         <Field label="Retire at" value={retireAge} onChange={setRetireAge} min={55} max={70} suffix="" />
         <Field label="Employer contribution" value={employerRate} onChange={setEmployerRate} min={12} max={20} step={0.5} suffix="%" />
         <Field label="Extra contribution / month" value={extra} onChange={setExtra} min={0} max={2000} step={50} money allowOver />
+      </div>
+
+      {/* Gender selector — for accurate ATO balance benchmarks */}
+      <div style={{ marginTop: 24 }}>
+        <label className="eyebrow" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          Gender
+          <span style={{ fontSize: 11, color: "var(--ink-faint)", fontStyle: "italic", textTransform: "none", letterSpacing: 0 }}>
+            — for age-group balance comparison only; doesn&apos;t affect fund returns
+          </span>
+        </label>
+        <div style={{ display: "inline-flex", border: "1px solid var(--rule-strong)", borderRadius: 8, overflow: "hidden" }}>
+          {([["all", "All Australians"], ["female", "Female"], ["male", "Male"]] as const).map(([val, lbl], i) => (
+            <button
+              key={val}
+              onClick={() => setGender(val)}
+              style={{
+                padding: "8px 16px", fontSize: 14, border: "none",
+                borderLeft: i > 0 ? "1px solid var(--rule-strong)" : "none",
+                background: gender === val ? "var(--ink)" : "transparent",
+                color: gender === val ? "var(--paper)" : "var(--ink-soft)",
+                cursor: "pointer", transition: "background 0.12s",
+              }}
+            >
+              {lbl}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Fund selector */}
@@ -172,7 +201,7 @@ export default function Tool() {
       </div>
 
       {/* Balance vs age group (ATO data) */}
-      <BalanceBenchmark balance={balance} age={age} />
+      <BalanceBenchmark balance={balance} age={age} gender={gender} />
 
       {/* Fee drag callout */}
       {feeGapAnnual > 0.01 && (
@@ -209,11 +238,12 @@ export default function Tool() {
 }
 
 function Field({
-  label, value, onChange, min, max, step = 1, money = false, suffix = "", allowOver = false,
+  label, value, onChange, min, max, step = 1, money = false, suffix = "", allowOver = false, tooltip = "",
 }: {
   label: string; value: number; onChange: (n: number) => void;
-  min: number; max: number; step?: number; money?: boolean; suffix?: string; allowOver?: boolean;
+  min: number; max: number; step?: number; money?: boolean; suffix?: string; allowOver?: boolean; tooltip?: string;
 }) {
+  const [showTip, setShowTip] = useState(false);
   const [text, setText] = useState<string>(String(value));
 
   // keep the text box in sync when the slider (or external state) moves
@@ -233,7 +263,38 @@ function Field({
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 10 }}>
-        <label style={{ fontSize: 14, color: "var(--ink-soft)" }}>{label}</label>
+        <label style={{ fontSize: 14, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
+          {label}
+          {tooltip && (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={`More info: ${label}`}
+              onMouseEnter={() => setShowTip(true)}
+              onMouseLeave={() => setShowTip(false)}
+              onFocus={() => setShowTip(true)}
+              onBlur={() => setShowTip(false)}
+              onClick={() => setShowTip((s) => !s)}
+              style={{ position: "relative", display: "inline-flex", cursor: "help" }}
+            >
+              <span style={{
+                width: 16, height: 16, borderRadius: "50%", border: "1px solid var(--rule-strong)",
+                color: "var(--ink-faint)", fontSize: 11, fontStyle: "italic", fontWeight: 600,
+                display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif",
+              }}>i</span>
+              {showTip && (
+                <span style={{
+                  position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
+                  width: 230, padding: "10px 12px", background: "var(--ink)", color: "var(--paper)",
+                  borderRadius: 8, fontSize: 12.5, lineHeight: 1.5, fontWeight: 400, zIndex: 10,
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.22)", textAlign: "left",
+                }}>
+                  {tooltip}
+                </span>
+              )}
+            </span>
+          )}
+        </label>
         <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
           {money && <span className="mono" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-soft)" }}>$</span>}
           <input

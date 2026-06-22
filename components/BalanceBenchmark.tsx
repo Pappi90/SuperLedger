@@ -1,17 +1,23 @@
 "use client";
 
-import { balanceStanding, atoBalances, balancePercentile, formatFull } from "@/lib/super";
+import { balanceStanding, atoBalances, balancePercentile, formatFull, type Gender } from "@/lib/super";
 
-export default function BalanceBenchmark({ balance, age }: { balance: number; age: number }) {
-  const { band, median, ratio, verified } = balanceStanding(balance, age);
+export default function BalanceBenchmark({ balance, age, gender = "all" }: { balance: number; age: number; gender?: Gender }) {
+  const { band, median, ratio, verified, genderUsed } = balanceStanding(balance, age, gender);
 
   const ahead = balance >= median;
   const diff = Math.abs(balance - median);
   const pctOfMedian = Math.round(ratio * 100);
 
-  // Real percentile from ATO Table 22 distribution
+  // Real percentile from ATO Table 22 distribution (combined-sex only — see note)
   const { percentile, topPct, ageLabel } = balancePercentile(balance, age);
   const topHalf = percentile >= 50;
+
+  // Wording helpers for the gender-specific median comparison
+  const peerWord = genderUsed === "male" ? "men" : genderUsed === "female" ? "women" : "Australians";
+  const typicalLabel = genderUsed === "male" ? `men aged ${band.band}`
+    : genderUsed === "female" ? `women aged ${band.band}`
+    : `ages ${band.band}`;
 
   // bar: median sits at 50% of the track; user's marker scales relative to it, capped
   const markerPos = Math.max(4, Math.min(96, (ratio / 2) * 100));
@@ -20,10 +26,11 @@ export default function BalanceBenchmark({ balance, age }: { balance: number; ag
     <div className="card" style={{ marginTop: 20 }}>
       <h3 style={{ fontSize: 19, marginBottom: 6 }}>Your balance vs your age group</h3>
       <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 20 }}>
-        Ages {band.band} · ATO median balance · data to {atoBalances.asAt}
+        {genderUsed === "all" ? `Ages ${band.band}` : `${peerWord.charAt(0).toUpperCase() + peerWord.slice(1)} aged ${band.band}`}
+        {" "}· ATO median balance · data to {atoBalances.asAt}
       </p>
 
-      {/* Percentile headline */}
+      {/* Percentile headline — note: distribution data is combined-sex only */}
       <div style={{
         padding: "16px 18px", borderRadius: 10, marginBottom: 22,
         background: topHalf ? "var(--green-soft)" : "var(--brass-soft)",
@@ -49,7 +56,7 @@ export default function BalanceBenchmark({ balance, age }: { balance: number; ag
           <div className="mono" style={{ fontSize: 28, fontWeight: 600 }}>{formatFull(balance)}</div>
         </div>
         <div style={{ borderLeft: "1px solid var(--rule-strong)", paddingLeft: 24 }}>
-          <div className="eyebrow" style={{ marginBottom: 4 }}>Typical for {band.band}</div>
+          <div className="eyebrow" style={{ marginBottom: 4 }}>Typical for {typicalLabel}</div>
           <div className="mono" style={{ fontSize: 28, fontWeight: 600, color: "var(--ink-soft)" }}>
             {formatFull(median)}
           </div>
@@ -83,13 +90,21 @@ export default function BalanceBenchmark({ balance, age }: { balance: number; ag
         color: ahead ? "var(--green)" : "var(--clay)", fontSize: 15, lineHeight: 1.5,
       }}>
         {ahead ? (
-          <>You&apos;re <strong>{formatFull(diff)} ahead</strong> of the typical {band.band} balance —
+          <>You&apos;re <strong>{formatFull(diff)} ahead</strong> of the typical {typicalLabel} balance —
             about {pctOfMedian}% of the median.</>
         ) : (
-          <>You&apos;re <strong>{formatFull(diff)} behind</strong> the typical {band.band} balance —
+          <>You&apos;re <strong>{formatFull(diff)} behind</strong> the typical {typicalLabel} balance —
             about {pctOfMedian}% of the median. A gap at this age is common and closeable.</>
         )}
       </div>
+
+      {genderUsed !== "all" && (
+        <p style={{ fontSize: 11, color: "var(--ink-faint)", marginTop: 12, lineHeight: 1.5 }}>
+          The median above is for {peerWord} aged {band.band}. The &quot;top X%&quot; ranking uses ATO&apos;s
+          combined-sex distribution (the only breakdown ATO publishes for that figure), so it&apos;s across
+          all Australians your age.
+        </p>
+      )}
 
       {!verified && (
         <p style={{ fontSize: 11, color: "var(--brass)", marginTop: 12, lineHeight: 1.5 }}>
