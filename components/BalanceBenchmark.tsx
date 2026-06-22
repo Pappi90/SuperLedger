@@ -1,6 +1,6 @@
 "use client";
 
-import { balanceStanding, atoBalances, formatFull } from "@/lib/super";
+import { balanceStanding, atoBalances, balancePercentile, formatFull } from "@/lib/super";
 
 export default function BalanceBenchmark({ balance, age }: { balance: number; age: number }) {
   const { band, median, ratio, verified } = balanceStanding(balance, age);
@@ -9,15 +9,39 @@ export default function BalanceBenchmark({ balance, age }: { balance: number; ag
   const diff = Math.abs(balance - median);
   const pctOfMedian = Math.round(ratio * 100);
 
+  // Real percentile from ATO Table 22 distribution
+  const { percentile, topPct, ageLabel } = balancePercentile(balance, age);
+  const topHalf = percentile >= 50;
+
   // bar: median sits at 50% of the track; user's marker scales relative to it, capped
   const markerPos = Math.max(4, Math.min(96, (ratio / 2) * 100));
 
   return (
     <div className="card" style={{ marginTop: 20 }}>
       <h3 style={{ fontSize: 19, marginBottom: 6 }}>Your balance vs your age group</h3>
-      <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 22 }}>
+      <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 20 }}>
         Ages {band.band} · ATO median balance · data to {atoBalances.asAt}
       </p>
+
+      {/* Percentile headline */}
+      <div style={{
+        padding: "16px 18px", borderRadius: 10, marginBottom: 22,
+        background: topHalf ? "var(--green-soft)" : "var(--brass-soft)",
+        border: `1px solid ${topHalf ? "var(--green)" : "var(--brass)"}`,
+      }}>
+        <div className="eyebrow" style={{ color: topHalf ? "var(--green)" : "var(--brass)", marginBottom: 6 }}>
+          Where you rank
+        </div>
+        <div style={{ fontSize: 22, lineHeight: 1.3, color: "var(--ink)" }}>
+          {topHalf ? (
+            <>You&apos;re in the <strong className="mono" style={{ color: "var(--green)" }}>top {topPct}%</strong> of
+              Australians aged {ageLabel} by super balance.</>
+          ) : (
+            <>You&apos;re ahead of <strong className="mono" style={{ color: "var(--brass)" }}>{percentile}%</strong> of
+              Australians aged {ageLabel} — there&apos;s room to climb, and time to do it.</>
+          )}
+        </div>
+      </div>
 
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 22 }}>
         <div>
