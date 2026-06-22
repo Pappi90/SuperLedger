@@ -73,3 +73,41 @@ export function formatMoney(n: number): string {
 export function formatFull(n: number): string {
   return "$" + Math.round(n).toLocaleString("en-AU");
 }
+
+// ── ATO balance-by-age benchmark ────────────────────────────────
+import ato from "./atoBalances.json";
+
+export type AgeBand = {
+  band: string; ageFrom: number; ageTo: number; median: number;
+  medianMale?: number; medianFemale?: number; verified: boolean;
+};
+
+export type AtoData = {
+  source: string; asAt: string; licence: string; verified: boolean;
+  national: { medianAll: number; averageAll: number; medianMale: number; medianFemale: number };
+  byAge: AgeBand[];
+};
+
+export const atoBalances = ato as unknown as AtoData;
+
+export function ageBandFor(age: number): AgeBand {
+  const bands = atoBalances.byAge;
+  for (const b of bands) {
+    if (age >= b.ageFrom && age <= b.ageTo) return b;
+  }
+  return bands[bands.length - 1];
+}
+
+// How a balance compares to the median for that age band.
+// Returns the ratio and a plain-English standing.
+export function balanceStanding(balance: number, age: number): {
+  band: AgeBand; median: number; ratio: number; aheadPct: number; verified: boolean;
+} {
+  const band = ageBandFor(age);
+  const median = band.median;
+  const ratio = median > 0 ? balance / median : 1;
+  // crude but honest: express how far above/below the median midpoint they sit,
+  // capped to a sensible 0-99 display range
+  const aheadPct = Math.max(1, Math.min(99, Math.round(50 * ratio)));
+  return { band, median, ratio, aheadPct, verified: band.verified && atoBalances.verified };
+}

@@ -1,0 +1,123 @@
+{
+  "_comment": "ATO median super balance by age, 2023-24. ALL figures verified from ATO Snapshot table 5 (Chart 12 data). 'median' is the combined male+female median for each age band.",
+  "source": "ATO Taxation Statistics 2023-24, Individuals \u2014 Chart 12: Median super balance by age and sex",
+  "asAt": "30 June 2024",
+  "licence": "CC BY 4.0 \u2014 Commonwealth of Australia (ATO). Not affiliated with or endorsed by the ATO.",
+  "verified": true,
+  "national": {
+    "medianAll": 63339,
+    "averageAll": 182781,
+    "medianMale": 71914,
+    "medianFemale": 57688
+  },
+  "byAge": [
+    {
+      "band": "18-24",
+      "ageFrom": 18,
+      "ageTo": 24,
+      "median": 6071,
+      "medianMale": 6380,
+      "medianFemale": 5784,
+      "verified": true
+    },
+    {
+      "band": "25-29",
+      "ageFrom": 25,
+      "ageTo": 29,
+      "median": 21395,
+      "medianMale": 21742,
+      "medianFemale": 21048,
+      "verified": true
+    },
+    {
+      "band": "30-34",
+      "ageFrom": 30,
+      "ageTo": 34,
+      "median": 40426,
+      "medianMale": 42962,
+      "medianFemale": 38070,
+      "verified": true
+    },
+    {
+      "band": "35-39",
+      "ageFrom": 35,
+      "ageTo": 39,
+      "median": 69200,
+      "medianMale": 78289,
+      "medianFemale": 61022,
+      "verified": true
+    },
+    {
+      "band": "40-44",
+      "ageFrom": 40,
+      "ageTo": 44,
+      "median": 100330,
+      "medianMale": 116076,
+      "medianFemale": 85804,
+      "verified": true
+    },
+    {
+      "band": "45-49",
+      "ageFrom": 45,
+      "ageTo": 49,
+      "median": 131705,
+      "medianMale": 154751,
+      "medianFemale": 110864,
+      "verified": true
+    },
+    {
+      "band": "50-54",
+      "ageFrom": 50,
+      "ageTo": 54,
+      "median": 161375,
+      "medianMale": 192196,
+      "medianFemale": 134309,
+      "verified": true
+    },
+    {
+      "band": "55-59",
+      "ageFrom": 55,
+      "ageTo": 59,
+      "median": 185120,
+      "medianMale": 220560,
+      "medianFemale": 154732,
+      "verified": true
+    },
+    {
+      "band": "60-64",
+      "ageFrom": 60,
+      "ageTo": 64,
+      "median": 203326,
+      "medianMale": 236126,
+      "medianFemale": 174655,
+      "verified": true
+    },
+    {
+      "band": "65-69",
+      "ageFrom": 65,
+      "ageTo": 69,
+      "median": 218631,
+      "medianMale": 230766,
+      "medianFemale": 207187,
+      "verified": true
+    },
+    {
+      "band": "70-74",
+      "ageFrom": 70,
+      "ageTo": 74,
+      "median": 227982,
+      "medianMale": 227027,
+      "medianFemale": 228978,
+      "verified": true
+    },
+    {
+      "band": "75+",
+      "ageFrom": 75,
+      "ageTo": 200,
+      "median": 197878,
+      "medianMale": 200477,
+      "medianFemale": 195201,
+      "verified": true
+    }
+  ]
+}

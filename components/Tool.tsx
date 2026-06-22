@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { funds, benchmark, percentileRank, fundReturns, fundFees, formatFull } from "@/lib/super";
 import PercentileBar from "./PercentileBar";
 import Projection from "./Projection";
+import BalanceBenchmark from "./BalanceBenchmark";
 
 const fmt = (n: number) => n.toLocaleString("en-AU");
 
@@ -135,6 +136,9 @@ export default function Tool() {
           />
         </div>
       </div>
+
+      {/* Balance vs age group (ATO data) */}
+      <BalanceBenchmark balance={balance} age={age} />
 
       {/* Fee drag callout */}
       {feeGapAnnual > 0.01 && (
