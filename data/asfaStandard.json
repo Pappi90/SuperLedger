@@ -1,0 +1,28 @@
+{
+  "_comment": "ASFA Retirement Standard — lump sums needed at 67 and the on-track age milestones. All verified from ASFA (March quarter 2026 / Feb 2026 release).",
+  "source": "ASFA Retirement Standard, March quarter 2026",
+  "asAt": "March 2026",
+  "url": "https://www.superannuation.asn.au/consumers/retirement-standard/",
+  "assumptions": "ASFA figures are in today's dollars (2.75% AWE deflator, 6% assumed earning rate), assume the retiree draws down all capital and receives a part Age Pension, and assume home ownership unless stated.",
+  "retireAge": 67,
+  "lumpSum": {
+    "comfortable": { "single": 630000, "couple": 730000 },
+    "modest": { "single": 110000, "couple": 120000 },
+    "modestRenting": { "single": 340000, "couple": 385000 }
+  },
+  "annualSpend": {
+    "comfortable": { "single": 55923, "couple": 78566 },
+    "modest": { "single": 36434, "couple": 52473 },
+    "modestRenting": { "single": 51164, "couple": 69002 }
+  },
+  "onTrackComfortableSingle": [
+    { "age": 30, "balance": 66500 },
+    { "age": 40, "balance": 168000 },
+    { "age": 50, "balance": 296000 },
+    { "age": 55, "balance": 377000 },
+    { "age": 60, "balance": 469000 },
+    { "age": 65, "balance": 571000 },
+    { "age": 67, "balance": 630000 }
+  ],
+  "onTrackAssumption": "ASFA 'on track' milestones assume a future pre-tax income of $65,000 that keeps pace with inflation, targeting the comfortable single standard."
+}

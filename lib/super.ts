@@ -236,3 +236,52 @@ export const EVERYDAY_ITEMS = [
   { label: "Coffee", price: 5.5, icon: "☕" },
   { label: "Loaf of bread", price: 4.5, icon: "🍞" },
 ];
+
+// ── ASFA Retirement Standard ────────────────────────────────────
+import asfa from "./asfaStandard.json";
+
+export type AsfaStandard = {
+  source: string; asAt: string; url: string; assumptions: string; retireAge: number;
+  lumpSum: {
+    comfortable: { single: number; couple: number };
+    modest: { single: number; couple: number };
+    modestRenting: { single: number; couple: number };
+  };
+  annualSpend: {
+    comfortable: { single: number; couple: number };
+    modest: { single: number; couple: number };
+    modestRenting: { single: number; couple: number };
+  };
+  onTrackComfortableSingle: { age: number; balance: number }[];
+  onTrackAssumption: string;
+};
+
+export const asfaStandard = asfa as AsfaStandard;
+
+export type Household = "single" | "couple";
+// The three ASFA tiers. "modestRenting" is the modest standard for private renters
+// (ASFA only publishes the renting standard at the modest level).
+export type LifestyleTier = "comfortable" | "modest" | "modestRenting";
+
+// Linear-interpolate the ASFA "on track" balance for an exact age (comfortable single track).
+export function asfaOnTrackBalance(age: number): number {
+  const pts = asfaStandard.onTrackComfortableSingle;
+  if (age <= pts[0].age) return pts[0].balance;
+  if (age >= pts[pts.length - 1].age) return pts[pts.length - 1].balance;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    if (age >= a.age && age <= b.age) {
+      const frac = (age - a.age) / (b.age - a.age);
+      return Math.round(a.balance + frac * (b.balance - a.balance));
+    }
+  }
+  return pts[pts.length - 1].balance;
+}
+
+export function asfaLumpSum(tier: LifestyleTier, household: Household): number {
+  return asfaStandard.lumpSum[tier][household];
+}
+
+export function asfaAnnualSpend(tier: LifestyleTier, household: Household): number {
+  return asfaStandard.annualSpend[tier][household];
+}

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { funds, benchmark, percentileRank, fundFiguresAtAge, fundReturns, fundNetReturns, fundFees, formatFull } from "@/lib/super";
+import { funds, benchmark, percentileRank, fundFiguresAtAge, fundReturns, fundNetReturns, fundFees, formatFull, project, toTodaysDollars } from "@/lib/super";
 import PercentileBar from "./PercentileBar";
 import Projection from "./Projection";
 import BalanceBenchmark from "./BalanceBenchmark";
+import OnTrack from "./OnTrack";
 
 const fmt = (n: number) => n.toLocaleString("en-AU");
 
@@ -52,6 +53,15 @@ export default function Tool() {
     }
     return Math.round(drag);
   }, [balance, netForProjection, feeGapAnnual, years, salary, extra, employerRate]);
+
+  // Projected balance at retirement (using actual employer rate + extra), and its
+  // value in today's dollars — needed to compare honestly against the ASFA standard,
+  // which is published in today's dollars.
+  const projectedAtRetirement = useMemo(() => {
+    const series = project(balance, netForProjection, extra, salary * (employerRate / 100), years);
+    return series[series.length - 1];
+  }, [balance, netForProjection, extra, salary, employerRate, years]);
+  const projectedTodaysDollars = toTodaysDollars(projectedAtRetirement, inflation, years);
 
   return (
     <div>
@@ -203,6 +213,9 @@ export default function Tool() {
       {/* Balance vs age group (ATO data) */}
       <BalanceBenchmark balance={balance} age={age} gender={gender} />
 
+      {/* Are you on track for a comfortable retirement (ASFA) */}
+      <OnTrack projectedTodaysDollars={projectedTodaysDollars} retireAge={retireAge} />
+
       {/* Fee drag callout */}
       {feeGapAnnual > 0.01 && (
         <div className="fee-drag">
@@ -215,6 +228,19 @@ export default function Tool() {
           </p>
         </div>
       )}
+
+      {/* Insurance acknowledgement */}
+      <div className="insurance-note">
+        <div className="eyebrow" style={{ color: "var(--ink-soft)" }}>One thing these figures don&apos;t include</div>
+        <p style={{ fontSize: 15, lineHeight: 1.55, marginTop: 8, color: "var(--ink-soft)" }}>
+          Most default super accounts also include insurance — typically life and total &amp; permanent
+          disability (TPD) cover, sometimes income protection — with premiums deducted straight from your
+          balance, often a few hundred dollars a year. That&apos;s a real cost on top of the fees shown here,
+          and it grows as you age. But unlike fees, it buys something: cover for you and your family. The
+          projections above don&apos;t subtract premiums, so check your fund&apos;s annual statement to see what
+          you&apos;re paying and what you&apos;re covered for.
+        </p>
+      </div>
 
       <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 28, lineHeight: 1.6 }}>
         General information only, not financial advice. Returns shown are APRA&apos;s published net
@@ -231,6 +257,7 @@ export default function Tool() {
         .results { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 36px; }
         .card { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 14px; padding: 26px; }
         .fee-drag { margin-top: 24px; padding: 24px 26px; border: 1px solid var(--clay); border-radius: 14px; background: var(--clay-soft); }
+        .insurance-note { margin-top: 16px; padding: 18px 22px; border-radius: 14px; background: var(--paper-raised); border: 1px solid var(--rule); }
         @media (max-width: 760px) { .results { grid-template-columns: 1fr; } }
       `}</style>
     </div>
