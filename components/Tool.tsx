@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { funds, benchmark, percentileRank, fundFiguresAtAge, fundReturns, fundNetReturns, fundFees, formatFull, project, toTodaysDollars } from "@/lib/super";
+import { funds, benchmark, percentileRank, fundFiguresAtAge, feeAtBalance, fundReturns, fundNetReturns, fundFees, formatFull, formatMoney, project, toTodaysDollars } from "@/lib/super";
 import PercentileBar from "./PercentileBar";
 import Projection from "./Projection";
 import BalanceBenchmark from "./BalanceBenchmark";
 import OnTrack from "./OnTrack";
+import Drawdown from "./Drawdown";
+import FeeCurve from "./FeeCurve";
 
 const fmt = (n: number) => n.toLocaleString("en-AU");
 
@@ -25,13 +27,19 @@ export default function Tool() {
   const selected = fundIdx >= 0 ? funds[fundIdx] : null;
   const ageFigures = selected ? fundFiguresAtAge(selected, age) : null;
   const myReturn = ageFigures?.nir5yr ?? selected?.nir5yr ?? manualReturn;
-  const myFee = ageFigures?.totalFee50k ?? selected?.totalFee50k ?? manualFee;
+  // Fee at the user's actual balance tier (fairer to both user and fund), with
+  // the $50k figure kept for the percentile ranking so all funds compare consistently.
+  const feeCurve = ageFigures?.feeCurve ?? null;
+  const balanceFee = feeCurve ? feeAtBalance(feeCurve, balance) : null;
+  const myFee50k = ageFigures?.totalFee50k ?? selected?.totalFee50k ?? manualFee;
+  const myFee = balanceFee?.fee ?? myFee50k;
+  const myFeeTier = balanceFee?.tier ?? 50000;
   // All-in net return (after investment AND admin fees). For a manually-entered
   // fund we approximate it as the entered return minus the admin portion of the fee.
   const myNetReturn = ageFigures?.net5yr ?? selected?.net5yr ?? Math.max(0, manualReturn - manualFee);
 
   const returnPct = useMemo(() => percentileRank(myReturn, fundReturns(), true), [myReturn]);
-  const feePct = useMemo(() => percentileRank(myFee, fundFees(), false), [myFee]);
+  const feePct = useMemo(() => percentileRank(myFee50k, fundFees(), false), [myFee50k]);
   const netPct = useMemo(() => percentileRank(myNetReturn, fundNetReturns(), true), [myNetReturn]);
 
   // Use the true all-in net return (after all fees) for the projection — this is
@@ -161,14 +169,23 @@ export default function Tool() {
             higherIsBetter
           />
           <PercentileBar
-            label="Annual fees (on $50k)"
-            value={myFee}
+            label="Annual fees vs other funds (on $50k)"
+            value={myFee50k}
             min={benchmark.totalFee50k.min}
             max={benchmark.totalFee50k.max}
             median={benchmark.totalFee50k.median}
             percentile={feePct}
             higherIsBetter={false}
           />
+          <p style={{ fontSize: 12, color: "var(--ink-faint)", margin: "-16px 0 18px", lineHeight: 1.5 }}>
+            Ranked at $50k so every fund is compared on the same basis. At your actual balance
+            (~{formatMoney(myFeeTier)}) this fund charges <strong className="mono">{myFee.toFixed(2)}%</strong>.
+          </p>
+
+          {/* Mini fee-vs-balance curve — fair to the fund, since fees fall as balance grows */}
+          {feeCurve && feeCurve.some((p) => p.fee !== null) && (
+            <FeeCurve curve={feeCurve} userTier={myFeeTier} />
+          )}
 
           {selected?.performanceTest && (
             <div style={{
@@ -215,6 +232,9 @@ export default function Tool() {
 
       {/* Are you on track for a comfortable retirement (ASFA) */}
       <OnTrack projectedTodaysDollars={projectedTodaysDollars} retireAge={retireAge} />
+
+      {/* How long will your super last (drawdown) */}
+      <Drawdown currentBalance={balance} currentAge={age} inflation={inflation} />
 
       {/* Fee drag callout */}
       {feeGapAnnual > 0.01 && (

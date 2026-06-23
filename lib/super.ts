@@ -36,14 +36,42 @@ export type Fund = {
 // own figures. Use this everywhere a user's age-specific return/fee is needed.
 export function fundFiguresAtAge(fund: Fund, age: number): {
   nir5yr: number | null; net5yr: number | null; totalFee50k: number | null; isLifecycle: boolean; stageLabel: string | null;
+  feeCurve: { balance: number; fee: number | null }[];
 } {
-  if (fund.strategy !== "Lifecycle" || !fund.stages || fund.stages.length === 0) {
-    return { nir5yr: fund.nir5yr, net5yr: fund.net5yr, totalFee50k: fund.totalFee50k, isLifecycle: false, stageLabel: null };
+  const src = (fund.strategy !== "Lifecycle" || !fund.stages || fund.stages.length === 0)
+    ? null
+    : (fund.stages.find((s) => age >= s.ageFrom && age <= s.ageTo) ?? fund.stages[0]);
+
+  const f10 = src ? src.totalFee10k : fund.totalFee10k;
+  const f50 = src ? src.totalFee50k : fund.totalFee50k;
+  const f100 = src ? src.totalFee100k : fund.totalFee100k;
+  const f250 = src ? src.totalFee250k : fund.totalFee250k;
+  const feeCurve = [
+    { balance: 10000, fee: f10 },
+    { balance: 50000, fee: f50 },
+    { balance: 100000, fee: f100 },
+    { balance: 250000, fee: f250 },
+  ];
+
+  if (!src) {
+    return { nir5yr: fund.nir5yr, net5yr: fund.net5yr, totalFee50k: fund.totalFee50k, isLifecycle: false, stageLabel: null, feeCurve };
   }
-  let stage = fund.stages.find((s) => age >= s.ageFrom && age <= s.ageTo);
-  if (!stage) stage = fund.stages[0];
-  const label = stage.ageTo >= 200 ? `age ${stage.ageFrom}+` : `age ${stage.ageFrom}–${stage.ageTo}`;
-  return { nir5yr: stage.nir5yr, net5yr: stage.net5yr, totalFee50k: stage.totalFee50k, isLifecycle: true, stageLabel: label };
+  const label = src.ageTo >= 200 ? `age ${src.ageFrom}+` : `age ${src.ageFrom}–${src.ageTo}`;
+  return { nir5yr: src.nir5yr, net5yr: src.net5yr, totalFee50k: src.totalFee50k, isLifecycle: true, stageLabel: label, feeCurve };
+}
+
+// Pick the fee at the APRA balance tier closest to the user's actual balance.
+export function feeAtBalance(
+  feeCurve: { balance: number; fee: number | null }[],
+  balance: number
+): { fee: number | null; tier: number } {
+  const valid = feeCurve.filter((p) => p.fee !== null);
+  if (valid.length === 0) return { fee: null, tier: 50000 };
+  let best = valid[0];
+  for (const p of valid) {
+    if (Math.abs(p.balance - balance) < Math.abs(best.balance - balance)) best = p;
+  }
+  return { fee: best.fee, tier: best.balance };
 }
 
 export type Stats = {
@@ -284,4 +312,78 @@ export function asfaLumpSum(tier: LifestyleTier, household: Household): number {
 
 export function asfaAnnualSpend(tier: LifestyleTier, household: Household): number {
   return asfaStandard.annualSpend[tier][household];
+}
+
+// ── Retirement drawdown / depletion model ───────────────────────
+// Models how long a balance lasts when drawing down in retirement.
+// The balance keeps earning `returnPct` each year; withdrawals optionally
+// rise with `inflationPct` to preserve buying power. Returns the age the
+// money runs out (or null if it never depletes within the horizon).
+
+export type DrawdownResult = {
+  depletes: boolean;
+  ageDepleted: number | null;
+  yearsLasted: number;
+  series: { age: number; balance: number }[];
+  neverDepletes: boolean; // returns >= withdrawals, balance grows
+};
+
+export function drawdown(
+  startBalance: number,
+  startAge: number,
+  annualWithdrawal: number, // in today's dollars (year 1 amount)
+  returnPct: number,
+  inflationPct: number,
+  growWithInflation: boolean,
+  maxAge = 105
+): DrawdownResult {
+  const r = returnPct / 100;
+  const infl = inflationPct / 100;
+  let balance = startBalance;
+  let withdrawal = annualWithdrawal;
+  const series: { age: number; balance: number }[] = [{ age: startAge, balance: Math.round(balance) }];
+
+  for (let age = startAge; age < maxAge; age++) {
+    // withdraw at the start of the year, then earn returns on what's left
+    balance -= withdrawal;
+    if (balance <= 0) {
+      series.push({ age: age + 1, balance: 0 });
+      return {
+        depletes: true, ageDepleted: age + 1, yearsLasted: age + 1 - startAge,
+        series, neverDepletes: false,
+      };
+    }
+    balance *= 1 + r;
+    if (growWithInflation) withdrawal *= 1 + infl;
+    series.push({ age: age + 1, balance: Math.round(balance) });
+  }
+
+  // Did it grow rather than shrink over the horizon? (sustainable)
+  const neverDepletes = series[series.length - 1].balance >= startBalance * 0.95;
+  return {
+    depletes: false, ageDepleted: null, yearsLasted: maxAge - startAge,
+    series, neverDepletes,
+  };
+}
+
+// Inverse: what flat/real annual withdrawal makes the balance last exactly
+// until targetAge? Solved by binary search over the drawdown model.
+export function sustainableWithdrawal(
+  startBalance: number,
+  startAge: number,
+  targetAge: number,
+  returnPct: number,
+  inflationPct: number,
+  growWithInflation: boolean
+): number {
+  if (targetAge <= startAge) return 0;
+  let lo = 0, hi = startBalance; // can't withdraw more than the whole balance in year 1
+  for (let iter = 0; iter < 40; iter++) {
+    const mid = (lo + hi) / 2;
+    const res = drawdown(startBalance, startAge, mid, returnPct, inflationPct, growWithInflation, targetAge);
+    // if it still has money at targetAge (didn't deplete before), we can withdraw more
+    if (res.depletes && res.ageDepleted! < targetAge) hi = mid;
+    else lo = mid;
+  }
+  return Math.round((lo + hi) / 2);
 }
