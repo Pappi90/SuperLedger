@@ -75,13 +75,13 @@ export default function Tool() {
     <div>
       {/* Inputs */}
       <div className="grid-inputs">
-        <Field label="Your age" value={age} onChange={setAge} min={18} max={75} suffix="" />
-        <Field label="Current balance" value={balance} onChange={setBalance} min={0} max={1000000} step={5000} money allowOver />
-        <Field label="Annual salary" value={salary} onChange={setSalary} min={30000} max={400000} step={5000} money allowOver
-          tooltip="Use your regular before-tax earnings (your base pay plus regular commissions and allowances). Super is legally paid on 'ordinary time earnings', which generally excludes overtime and one-off bonuses." />
-        <Field label="Retire at" value={retireAge} onChange={setRetireAge} min={55} max={70} suffix="" />
-        <Field label="Employer contribution" value={employerRate} onChange={setEmployerRate} min={12} max={20} step={0.5} suffix="%" />
-        <Field label="Extra contribution / month" value={extra} onChange={setExtra} min={0} max={2000} step={50} money allowOver />
+        <Field label="Your age" value={age} onChange={setAge} min={16} max={85} suffix="" />
+        <Field label="Current balance" value={balance} onChange={setBalance} min={0} max={3000000} step={5000} money allowOver />
+        <Field label="Annual salary" value={salary} onChange={setSalary} min={0} max={2000000} step={5000} money allowOver
+          tooltip="Use your regular before-tax earnings (your base pay plus regular commissions and allowances). Super is legally paid on 'ordinary time earnings', which generally excludes overtime and one-off bonuses. If you're retired or not working, set this to $0." />
+        <Field label="Retire at" value={retireAge} onChange={setRetireAge} min={55} max={85} suffix="" />
+        <Field label="Employer contribution" value={employerRate} onChange={setEmployerRate} min={0} max={40} step={0.5} suffix="%" />
+        <Field label="Extra contribution / month" value={extra} onChange={setExtra} min={0} max={5000} step={50} money allowOver />
       </div>
 
       {/* Gender selector — for accurate ATO balance benchmarks */}
@@ -208,22 +208,37 @@ export default function Tool() {
 
         <div className="card">
           <h3 style={{ fontSize: 19, marginBottom: 6 }}>Your retirement outlook</h3>
-          <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 22 }}>
-            {employerRate > 12
-              ? `Based on your ${employerRate}% employer contributions — dashed line shows the 12% minimum`
-              : "Assumes the 12% Super Guarantee on your salary"}
-          </p>
-          <Projection
-            balance={balance}
-            age={age}
-            retireAge={retireAge}
-            netReturn={netForProjection}
-            extraMonthly={extra}
-            salaryAnnual={salary}
-            employerRate={employerRate}
-            inflation={inflation}
-            onInflationChange={setInflation}
-          />
+          {age >= retireAge ? (
+            <div>
+              <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 16 }}>
+                You&apos;re at or past your retirement age
+              </p>
+              <p style={{ fontSize: 15, color: "var(--ink-soft)", lineHeight: 1.55 }}>
+                Since you&apos;ve reached retirement, the accumulation projection doesn&apos;t apply. Head to the
+                <strong> &quot;How long will your super last?&quot;</strong> section below — that&apos;s the one built for
+                you, showing how far your current balance stretches at the spending level you choose.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 22 }}>
+                {employerRate > 12
+                  ? `Based on your ${employerRate}% employer contributions — dashed line shows the 12% minimum`
+                  : "Assumes the 12% Super Guarantee on your salary"}
+              </p>
+              <Projection
+                balance={balance}
+                age={age}
+                retireAge={retireAge}
+                netReturn={netForProjection}
+                extraMonthly={extra}
+                salaryAnnual={salary}
+                employerRate={employerRate}
+                inflation={inflation}
+                onInflationChange={setInflation}
+              />
+            </>
+          )}
         </div>
       </div>
 

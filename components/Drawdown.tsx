@@ -61,7 +61,7 @@ export default function Drawdown({ currentBalance, currentAge, inflation }: Prop
 
       {/* Inputs */}
       <div className="dd-inputs">
-        <DDField label="Retire / draw from age" value={startAge} onChange={setRetireAge} min={Math.max(currentAge, 55)} max={75} />
+        <DDField label="Retire / draw from age" value={startAge} onChange={setRetireAge} min={Math.max(currentAge, 55)} max={Math.max(85, currentAge)} />
         {mode === "spendToAge" ? (
           <DDField label="Annual spending" value={annualSpend} onChange={setAnnualSpend} min={10000} max={200000} step={1000} money />
         ) : (
