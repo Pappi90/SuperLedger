@@ -2,28 +2,31 @@
 
 import { useState, useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { drawdown, sustainableWithdrawal, formatMoney, formatFull } from "@/lib/super";
+import { drawdown, sustainableWithdrawal, formatMoney, formatFull, toTodaysDollars } from "@/lib/super";
 
 type Props = {
   currentBalance: number;
+  projectedBalance: number; // balance grown to plannedRetireAge (future dollars)
   currentAge: number;
+  plannedRetireAge: number;
   inflation: number;
 };
 
 type Mode = "spendToAge" | "ageToSpend";
 
-export default function Drawdown({ currentBalance, currentAge, inflation }: Props) {
+export default function Drawdown({ currentBalance, projectedBalance, currentAge, plannedRetireAge, inflation }: Props) {
   const [mode, setMode] = useState<Mode>("spendToAge");
-  const [retireAge, setRetireAge] = useState(Math.max(currentAge, 60));
   const [annualSpend, setAnnualSpend] = useState(50000);
   const [lastUntil, setLastUntil] = useState(90);
   const [retReturn, setRetReturn] = useState(5);
   const [growWithInflation, setGrowWithInflation] = useState(true);
 
-  // This panel is about the money you HAVE now — useful for those near or at
-  // retirement deciding when to stop. "Draw from age" is the age you start drawing.
-  const startBalance = currentBalance;
-  const startAge = retireAge;
+  // Already retired? Use the actual current balance from now.
+  // Still working? Use the projected balance at the planned retirement age.
+  const alreadyRetired = currentAge >= plannedRetireAge;
+  const retiredInPast = currentAge > plannedRetireAge; // retired before now, mid-drawdown
+  const startBalance = alreadyRetired ? currentBalance : projectedBalance;
+  const startAge = alreadyRetired ? currentAge : plannedRetireAge;
 
   const result = useMemo(
     () => drawdown(startBalance, startAge, annualSpend, retReturn, inflation, growWithInflation),
@@ -31,7 +34,7 @@ export default function Drawdown({ currentBalance, currentAge, inflation }: Prop
   );
 
   const sustainable = useMemo(
-    () => sustainableWithdrawal(startBalance, startAge, lastUntil, retReturn, inflation, growWithInflation),
+    () => sustainableWithdrawal(startBalance, startAge, Math.max(lastUntil, startAge + 1), retReturn, inflation, growWithInflation),
     [startBalance, startAge, lastUntil, retReturn, inflation, growWithInflation]
   );
 
@@ -41,7 +44,15 @@ export default function Drawdown({ currentBalance, currentAge, inflation }: Prop
     <div className="card" style={{ marginTop: 20 }}>
       <h3 style={{ fontSize: 19, marginBottom: 6 }}>How long will your super last?</h3>
       <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 20 }}>
-        Based on the <strong>{formatFull(startBalance)}</strong> you have now · drawing down from age {startAge}
+        {retiredInPast ? (
+          <>You retired at {plannedRetireAge} and have <strong>{formatFull(startBalance)}</strong> left now ·
+          showing how long that lasts from age {startAge}</>
+        ) : alreadyRetired ? (
+          <>Based on the <strong>{formatFull(startBalance)}</strong> you have now · drawing down from age {startAge}</>
+        ) : (
+          <>Based on your projected <strong>{formatFull(startBalance)}</strong> at age {startAge} (your balance grown
+          with contributions until then) · in future dollars</>
+        )}
       </p>
 
       {/* Mode toggle */}
@@ -61,7 +72,15 @@ export default function Drawdown({ currentBalance, currentAge, inflation }: Prop
 
       {/* Inputs */}
       <div className="dd-inputs">
-        <DDField label="Retire / draw from age" value={startAge} onChange={setRetireAge} min={Math.max(currentAge, 55)} max={Math.max(85, currentAge)} />
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>{alreadyRetired ? "Drawing from age" : "Retiring at age"}</label>
+            <span className="mono" style={{ fontSize: 15, fontWeight: 600 }}>{startAge}</span>
+          </div>
+          <p style={{ fontSize: 11, color: "var(--ink-faint)", lineHeight: 1.4, margin: 0 }}>
+            {retiredInPast ? "Your current age (already retired)" : alreadyRetired ? "Your current age" : "Set by \u201cRetire at\u201d above"}
+          </p>
+        </div>
         {mode === "spendToAge" ? (
           <DDField label="Annual spending" value={annualSpend} onChange={setAnnualSpend} min={10000} max={200000} step={1000} money />
         ) : (
@@ -74,6 +93,14 @@ export default function Drawdown({ currentBalance, currentAge, inflation }: Prop
         <input type="checkbox" checked={growWithInflation} onChange={(e) => setGrowWithInflation(e.target.checked)} />
         Increase withdrawals each year with inflation ({inflation}%) to keep the same lifestyle
       </label>
+
+      {!alreadyRetired && (
+        <p style={{ fontSize: 11.5, color: "var(--ink-faint)", marginTop: 10, lineHeight: 1.5 }}>
+          Because your projected balance is in future dollars (it&apos;s {startAge - currentAge} years away),
+          the spending figure here is also in future dollars. As a rough guide, {formatMoney(toTodaysDollars(annualSpend, inflation, startAge - currentAge))} in
+          today&apos;s money would buy the same lifestyle then.
+        </p>
+      )}
 
       {/* Headline result */}
       <div style={{

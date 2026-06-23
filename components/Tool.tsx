@@ -79,7 +79,8 @@ export default function Tool() {
         <Field label="Current balance" value={balance} onChange={setBalance} min={0} max={3000000} step={5000} money allowOver />
         <Field label="Annual salary" value={salary} onChange={setSalary} min={0} max={2000000} step={5000} money allowOver
           tooltip="Use your regular before-tax earnings (your base pay plus regular commissions and allowances). Super is legally paid on 'ordinary time earnings', which generally excludes overtime and one-off bonuses. If you're retired or not working, set this to $0." />
-        <Field label="Retire at" value={retireAge} onChange={setRetireAge} min={55} max={85} suffix="" />
+        <Field label="Retire at" value={retireAge} onChange={setRetireAge} min={50} max={85} suffix=""
+          tooltip="The age you retired or plan to retire. If you've already retired, set this to the age you stopped working — the tool will switch to showing how long your current balance lasts from today." />
         <Field label="Employer contribution" value={employerRate} onChange={setEmployerRate} min={0} max={40} step={0.5} suffix="%" />
         <Field label="Extra contribution / month" value={extra} onChange={setExtra} min={0} max={5000} step={50} money allowOver />
       </div>
@@ -246,10 +247,16 @@ export default function Tool() {
       <BalanceBenchmark balance={balance} age={age} gender={gender} />
 
       {/* Are you on track for a comfortable retirement (ASFA) */}
-      <OnTrack projectedTodaysDollars={projectedTodaysDollars} retireAge={retireAge} />
+      <OnTrack projectedTodaysDollars={projectedTodaysDollars} retireAge={retireAge} alreadyRetired={age >= retireAge} />
 
       {/* How long will your super last (drawdown) */}
-      <Drawdown currentBalance={balance} currentAge={age} inflation={inflation} />
+      <Drawdown
+        currentBalance={balance}
+        projectedBalance={projectedAtRetirement}
+        currentAge={age}
+        plannedRetireAge={retireAge}
+        inflation={inflation}
+      />
 
       {/* Fee drag callout */}
       {feeGapAnnual > 0.01 && (

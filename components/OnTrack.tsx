@@ -6,6 +6,7 @@ import { asfaStandard, asfaLumpSum, asfaAnnualSpend, formatFull, formatMoney, ty
 type Props = {
   projectedTodaysDollars: number; // user's projected balance at retirement, in TODAY's dollars
   retireAge: number;
+  alreadyRetired?: boolean;
 };
 
 const TIERS: { key: LifestyleTier; label: string; sub: string }[] = [
@@ -14,7 +15,7 @@ const TIERS: { key: LifestyleTier; label: string; sub: string }[] = [
   { key: "modestRenting", label: "Modest", sub: "renting" },
 ];
 
-export default function OnTrack({ projectedTodaysDollars, retireAge }: Props) {
+export default function OnTrack({ projectedTodaysDollars, retireAge, alreadyRetired = false }: Props) {
   const [household, setHousehold] = useState<Household>("single");
   const [tier, setTier] = useState<LifestyleTier>("comfortable");
 
@@ -82,10 +83,10 @@ export default function OnTrack({ projectedTodaysDollars, retireAge }: Props) {
         </div>
         <div style={{ fontSize: 22, lineHeight: 1.3, color: "var(--ink)" }}>
           {onTrack ? (
-            <>Your projected <strong className="mono">{formatMoney(projectedTodaysDollars)}</strong> meets the
+            <>Your {alreadyRetired ? "balance" : "projected"} <strong className="mono">{formatMoney(projectedTodaysDollars)}</strong> meets the
               ASFA {tierWord} {household} target of <strong className="mono">{formatMoney(target)}</strong>.</>
           ) : (
-            <>You&apos;re tracking to <strong className="mono">{formatMoney(projectedTodaysDollars)}</strong> —
+            <>{alreadyRetired ? "Your" : "You're tracking to"} <strong className="mono">{formatMoney(projectedTodaysDollars)}</strong>{alreadyRetired ? " is" : ""} —
               about <strong className="mono">{formatMoney(gap)}</strong> short of the ASFA {tierWord} {household}{" "}
               target of <strong className="mono">{formatMoney(target)}</strong> ({pctOfTarget}% of the way).</>
           )}
