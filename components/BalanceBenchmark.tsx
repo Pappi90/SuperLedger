@@ -23,7 +23,7 @@ export default function BalanceBenchmark({ balance, age, gender = "all" }: { bal
   const markerPos = Math.max(4, Math.min(96, (ratio / 2) * 100));
 
   return (
-    <div className="card" style={{ marginTop: 20 }}>
+    <div className="card" style={{ marginTop: 24 }}>
       <h3 style={{ fontSize: 19, marginBottom: 6 }}>Your balance vs your age group</h3>
       <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 20 }}>
         {genderUsed === "all" ? `Ages ${band.band}` : `${peerWord.charAt(0).toUpperCase() + peerWord.slice(1)} aged ${band.band}`}

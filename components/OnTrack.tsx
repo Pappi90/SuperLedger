@@ -28,7 +28,7 @@ export default function OnTrack({ projectedTodaysDollars, retireAge, alreadyReti
   const tierWord = isRenting ? "modest (renting)" : tier;
 
   return (
-    <div className="card" style={{ marginTop: 20 }}>
+    <div className="card" style={{ marginTop: 24 }}>
       <h3 style={{ fontSize: 19, marginBottom: 6 }}>Are you on track for the retirement you want?</h3>
       <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 20 }}>
         Against the ASFA Retirement Standard · {asfaStandard.asAt} · in today&apos;s dollars

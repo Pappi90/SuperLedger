@@ -210,15 +210,19 @@ export default function Tool() {
               </p>
               {strongDespiteFees ? (
                 <p style={{ fontSize: 14, lineHeight: 1.5, marginTop: 12, padding: "12px 14px", background: "var(--green-soft)", borderRadius: 8, color: "var(--green)" }}>
-                  <strong>But fees aren&apos;t the whole story.</strong> After all fees, this fund&apos;s net return
-                  ({myNetReturn.toFixed(2)}%) is still <strong>above the median ({benchmark.net5yr.median}%)</strong> —
-                  so it&apos;s earning its keep despite the higher fee. What ultimately matters is return after fees,
-                  shown at the top of this section.
+                  <strong>But fees aren&apos;t the whole story.</strong> That {myFee.toFixed(2)}% fee is already taken
+                  out of this fund&apos;s net return of {myNetReturn.toFixed(2)}% — which is still
+                  <strong> above the median ({benchmark.net5yr.median}%)</strong>. In other words, even after paying
+                  more in fees, you&apos;d still be ahead of most funds. Return after fees is the figure that actually
+                  decides your outcome, and it&apos;s shown at the top of this section.
                 </p>
               ) : (
-                <p style={{ fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.5, marginTop: 10 }}>
-                  Fees are only half the picture — a fund can justify higher fees with stronger returns. Check the
-                  net-return-after-fees ranking at the top: that&apos;s the figure that actually decides your outcome.
+                <p style={{ fontSize: 13.5, color: "var(--ink-soft)", lineHeight: 1.55, marginTop: 12, padding: "12px 14px", background: "var(--paper)", borderRadius: 8, border: "1px solid var(--rule)" }}>
+                  Fees are only half the picture — a fund can justify a higher fee with stronger returns, so always
+                  check the net-return-after-fees ranking at the top. But here&apos;s the key thing:{" "}
+                  <strong style={{ color: "var(--ink)" }}>fees are one of the few things you actually control.</strong>{" "}
+                  You can&apos;t dictate what markets return, but you can choose a fund that doesn&apos;t quietly
+                  charge you more for the same — or less.
                 </p>
               )}
             </div>
@@ -318,12 +322,15 @@ export default function Tool() {
       </p>
 
       <style>{`
-        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px 28px; }
-        .results { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 36px; }
-        .card { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 14px; padding: 26px; }
-        .fee-drag { margin-top: 24px; padding: 24px 26px; border: 1px solid var(--clay); border-radius: 14px; background: var(--clay-soft); }
-        .insurance-note { margin-top: 16px; padding: 18px 22px; border-radius: 14px; background: var(--paper-raised); border: 1px solid var(--rule); }
-        @media (max-width: 760px) { .results { grid-template-columns: 1fr; } }
+        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 26px 32px; align-items: start; }
+        .results { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 40px; }
+        .card { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 16px; padding: 28px;
+          box-shadow: 0 1px 2px rgba(26,25,22,0.03); }
+        .fee-drag { margin-top: 24px; padding: 22px 24px; border: 1px solid var(--rule-strong);
+          border-left: 4px solid var(--clay); border-radius: 12px; background: var(--clay-soft); }
+        .insurance-note { margin-top: 20px; padding: 20px 24px; border-radius: 16px; background: var(--paper-raised);
+          border: 1px solid var(--rule); box-shadow: 0 1px 2px rgba(26,25,22,0.03); }
+        @media (max-width: 760px) { .results { grid-template-columns: 1fr; } .card { padding: 24px; } }
       `}</style>
     </div>
   );
@@ -354,9 +361,9 @@ function Field({
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 10 }}>
-        <label style={{ fontSize: 14, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
-          {label}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 10, minHeight: 38 }}>
+        <label style={{ fontSize: 14, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6, lineHeight: 1.3 }}>
+          <span>{label}</span>
           {tooltip && (
             <span
               role="button"

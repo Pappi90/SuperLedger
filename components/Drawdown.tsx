@@ -41,7 +41,7 @@ export default function Drawdown({ currentBalance, projectedBalance, currentAge,
   const chartData = (mode === "spendToAge" ? result.series : drawdown(startBalance, startAge, sustainable, retReturn, inflation, growWithInflation, lastUntil + 2).series);
 
   return (
-    <div className="card" style={{ marginTop: 20 }}>
+    <div className="card" style={{ marginTop: 24 }}>
       <h3 style={{ fontSize: 19, marginBottom: 6 }}>How long will your super last?</h3>
       <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 20 }}>
         {retiredInPast ? (

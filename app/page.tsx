@@ -36,9 +36,9 @@ export default function Home() {
           <div className="hero-hook">
             <span className="hook-fig mono">{lifetimeGapLabel}</span>
             <span className="hook-text">
-              is the difference in fees alone between Australia&apos;s cheapest and most expensive
-              MySuper fund, over a typical working life. Most people have no idea which side they&apos;re on.
-              <span style={{ display: "block", fontSize: 12, color: "var(--ink-faint)", marginTop: 6 }}>
+              is the gap in fees alone between Australia&apos;s cheapest and most expensive MySuper fund,
+              over a typical working life. Most people have no idea which side they&apos;re on.
+              <span className="hook-note">
                 Based on the {feeGap.toFixed(2)}-point fee gap applied over a 37-year career
                 ($30k starting balance, $90k salary, 12% super, 7% returns). Illustrative, not a forecast.
               </span>
@@ -70,17 +70,25 @@ export default function Home() {
       </footer>
 
       <style>{`
-        .hero { padding: 72px 0 56px; border-bottom: 1px solid var(--rule); }
-        .hero-title { font-size: clamp(34px, 6vw, 60px); margin: 18px 0 24px; max-width: 22ch; }
+        .hero { padding: 80px 0 56px; border-bottom: 1px solid var(--rule); }
+        .hero-title { font-size: clamp(34px, 6vw, 58px); margin: 20px 0 24px; max-width: 18ch; letter-spacing: -0.015em; }
         .ital { font-style: italic; color: var(--green); }
-        .hero-sub { font-size: 19px; color: var(--ink-soft); max-width: 56ch; line-height: 1.6; }
-        .hero-hook { display: flex; align-items: center; gap: 20px; margin-top: 32px; padding: 20px 24px;
-          background: var(--clay-soft); border: 1px solid var(--clay); border-radius: 14px; max-width: 60ch; }
-        .hook-fig { font-size: clamp(36px, 6vw, 52px); font-weight: 600; color: var(--clay); line-height: 1; flex: none; }
-        .hook-text { font-size: 15px; color: var(--ink); line-height: 1.5; }
-        .hero-stats { display: flex; gap: 40px; margin-top: 40px; flex-wrap: wrap; }
-        .foot { border-top: 1px solid var(--rule); padding: 32px 0 60px; margin-top: 40px; }
+        .hero-sub { font-size: 19px; color: var(--ink-soft); max-width: 62ch; line-height: 1.62; }
+        .hero-hook { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 24px;
+          margin-top: 40px; padding: 26px 28px; max-width: 62ch;
+          background: var(--paper-raised); border: 1px solid var(--rule-strong);
+          border-left: 4px solid var(--clay); border-radius: 12px; }
+        .hook-fig { font-size: clamp(40px, 6vw, 56px); font-weight: 600; color: var(--clay);
+          line-height: 0.95; letter-spacing: -0.02em; }
+        .hook-text { font-size: 15px; color: var(--ink-soft); line-height: 1.55; }
+        .hook-note { display: block; font-size: 12px; color: var(--ink-faint); margin-top: 8px; line-height: 1.5; }
+        .hero-stats { display: flex; gap: 48px; margin-top: 44px; flex-wrap: wrap; }
+        .foot { border-top: 1px solid var(--rule); padding: 32px 0 60px; margin-top: 56px; }
         section.wrap { padding-top: 48px; }
+        @media (max-width: 560px) {
+          .hero-hook { grid-template-columns: 1fr; gap: 8px; padding: 22px 22px; }
+          .hero-stats { gap: 28px; }
+        }
       `}</style>
     </main>
   );
@@ -89,8 +97,8 @@ export default function Home() {
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <div className="mono" style={{ fontSize: 26, fontWeight: 600, color: "var(--ink)" }}>{value}</div>
-      <div style={{ fontSize: 13, color: "var(--ink-faint)", marginTop: 2 }}>{label}</div>
+      <div className="mono" style={{ fontSize: 26, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>{value}</div>
+      <div style={{ fontSize: 13, color: "var(--ink-faint)", marginTop: 3 }}>{label}</div>
     </div>
   );
 }
