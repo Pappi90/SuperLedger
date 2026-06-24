@@ -62,6 +62,13 @@ export default function Tool() {
     return Math.round(drag);
   }, [balance, netForProjection, feeGapAnnual, years, salary, extra, employerRate]);
 
+  // Net-return context: fees only tell half the story. A higher-fee fund can still
+  // win if its return after all fees beats the median. Use the all-in net return
+  // (which already accounts for this fund's fees) to tell the honest combined story.
+  const myNetForCompare = myNetReturn;
+  const netVsMedian = myNetForCompare - benchmark.net5yr.median;
+  const strongDespiteFees = feeGapAnnual > 0.01 && netVsMedian > 0.1; // above-median net return despite higher fees
+
   // Projected balance at retirement (using actual employer rate + extra), and its
   // value in today's dollars — needed to compare honestly against the ASFA standard,
   // which is published in today's dollars.
@@ -191,13 +198,29 @@ export default function Tool() {
           {/* The cost of higher fees — the most visceral, shareable insight, kept high on the page */}
           {feeGapAnnual > 0.01 && (
             <div className="fee-drag" style={{ marginTop: 16 }}>
-              <div className="eyebrow" style={{ color: "var(--clay)" }}>What those fees cost you</div>
-              <p style={{ fontSize: 20, lineHeight: 1.35, marginTop: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <span className="eyebrow" style={{ color: "var(--clay)" }}>What those fees cost you</span>
+                <InfoDot tip={`How this is worked out: your fund's fee (${myFee.toFixed(2)}%) minus the cheapest quarter of funds (${cheapFee.toFixed(2)}%) = ${feeGapAnnual.toFixed(2)}% a year. That gap is applied to your balance every year from now until age ${retireAge}, as your balance grows with contributions and returns. It's an estimate to show the scale of fee differences, not a precise forecast.`} />
+              </div>
+              <p style={{ fontSize: 20, lineHeight: 1.35 }}>
                 Paying {myFee.toFixed(2)}% instead of the {cheapFee.toFixed(2)}% charged by the cheapest quarter of funds
                 could cost you about{" "}
                 <strong className="mono" style={{ color: "var(--clay)" }}>{formatFull(lifetimeFeeDrag)}</strong>{" "}
                 {age >= retireAge ? "over your retirement" : `in fees by age ${retireAge}`}.
               </p>
+              {strongDespiteFees ? (
+                <p style={{ fontSize: 14, lineHeight: 1.5, marginTop: 12, padding: "12px 14px", background: "var(--green-soft)", borderRadius: 8, color: "var(--green)" }}>
+                  <strong>But fees aren&apos;t the whole story.</strong> After all fees, this fund&apos;s net return
+                  ({myNetReturn.toFixed(2)}%) is still <strong>above the median ({benchmark.net5yr.median}%)</strong> —
+                  so it&apos;s earning its keep despite the higher fee. What ultimately matters is return after fees,
+                  shown at the top of this section.
+                </p>
+              ) : (
+                <p style={{ fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.5, marginTop: 10 }}>
+                  Fees are only half the picture — a fund can justify higher fees with stronger returns. Check the
+                  net-return-after-fees ranking at the top: that&apos;s the figure that actually decides your outcome.
+                </p>
+              )}
             </div>
           )}
 
@@ -395,5 +418,38 @@ function Field({
         </div>
       )}
     </div>
+  );
+}
+
+function InfoDot({ tip }: { tip: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label="More information"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+      onFocus={() => setShow(true)}
+      onBlur={() => setShow(false)}
+      onClick={() => setShow((s) => !s)}
+      style={{ position: "relative", display: "inline-flex", cursor: "help" }}
+    >
+      <span style={{
+        width: 16, height: 16, borderRadius: "50%", border: "1px solid var(--clay)",
+        color: "var(--clay)", fontSize: 11, fontStyle: "italic", fontWeight: 600,
+        display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif",
+      }}>i</span>
+      {show && (
+        <span style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
+          width: 260, padding: "11px 13px", background: "var(--ink)", color: "var(--paper)",
+          borderRadius: 8, fontSize: 12.5, lineHeight: 1.5, fontWeight: 400, zIndex: 10,
+          boxShadow: "0 4px 14px rgba(0,0,0,0.22)", textAlign: "left", textTransform: "none", letterSpacing: 0,
+        }}>
+          {tip}
+        </span>
+      )}
+    </span>
   );
 }

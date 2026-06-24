@@ -38,6 +38,10 @@ export default function Home() {
             <span className="hook-text">
               is the difference in fees alone between Australia&apos;s cheapest and most expensive
               MySuper fund, over a typical working life. Most people have no idea which side they&apos;re on.
+              <span style={{ display: "block", fontSize: 12, color: "var(--ink-faint)", marginTop: 6 }}>
+                Based on the {feeGap.toFixed(2)}-point fee gap applied over a 37-year career
+                ($30k starting balance, $90k salary, 12% super, 7% returns). Illustrative, not a forecast.
+              </span>
             </span>
           </div>
 
