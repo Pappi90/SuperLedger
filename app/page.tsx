@@ -4,6 +4,18 @@ import { benchmark, funds } from "@/lib/super";
 export default function Home() {
   const best = [...funds].sort((a, b) => (b.nir5yr ?? 0) - (a.nir5yr ?? 0))[0];
 
+  // Real lifetime cost of the fee gap between the cheapest and most expensive
+  // MySuper fund, on a representative career (30 → 67, $30k start, $90k salary,
+  // 12% SG, 7% net). Data-driven so the headline figure is never invented.
+  const feeGap = benchmark.totalFee50k.max - benchmark.totalFee50k.min;
+  const lifetimeGap = (() => {
+    let bal = 30000, drag = 0;
+    const sg = 90000 * 0.12;
+    for (let y = 0; y < 37; y++) { drag += bal * (feeGap / 100); bal = bal * 1.07 + sg; }
+    return Math.round(drag);
+  })();
+  const lifetimeGapLabel = "$" + Math.round(lifetimeGap / 1000) + "k";
+
   return (
     <main>
       {/* Hero */}
@@ -20,6 +32,15 @@ export default function Home() {
             fund ranks on net returns and fees — against every MySuper product in the country.
             No sign-up. No advice. Just the numbers.
           </p>
+
+          <div className="hero-hook">
+            <span className="hook-fig mono">{lifetimeGapLabel}</span>
+            <span className="hook-text">
+              is the difference in fees alone between Australia&apos;s cheapest and most expensive
+              MySuper fund, over a typical working life. Most people have no idea which side they&apos;re on.
+            </span>
+          </div>
+
           <div className="hero-stats">
             <Stat value={`${benchmark.count}`} label="MySuper products compared" />
             <Stat value={`${benchmark.nir5yr.min}–${benchmark.nir5yr.max}%`} label="5yr return spread" />
@@ -49,6 +70,10 @@ export default function Home() {
         .hero-title { font-size: clamp(34px, 6vw, 60px); margin: 18px 0 24px; max-width: 22ch; }
         .ital { font-style: italic; color: var(--green); }
         .hero-sub { font-size: 19px; color: var(--ink-soft); max-width: 56ch; line-height: 1.6; }
+        .hero-hook { display: flex; align-items: center; gap: 20px; margin-top: 32px; padding: 20px 24px;
+          background: var(--clay-soft); border: 1px solid var(--clay); border-radius: 14px; max-width: 60ch; }
+        .hook-fig { font-size: clamp(36px, 6vw, 52px); font-weight: 600; color: var(--clay); line-height: 1; flex: none; }
+        .hook-text { font-size: 15px; color: var(--ink); line-height: 1.5; }
         .hero-stats { display: flex; gap: 40px; margin-top: 40px; flex-wrap: wrap; }
         .foot { border-top: 1px solid var(--rule); padding: 32px 0 60px; margin-top: 40px; }
         section.wrap { padding-top: 48px; }

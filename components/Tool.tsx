@@ -188,6 +188,19 @@ export default function Tool() {
             <FeeCurve curve={feeCurve} userTier={myFeeTier} />
           )}
 
+          {/* The cost of higher fees — the most visceral, shareable insight, kept high on the page */}
+          {feeGapAnnual > 0.01 && (
+            <div className="fee-drag" style={{ marginTop: 16 }}>
+              <div className="eyebrow" style={{ color: "var(--clay)" }}>What those fees cost you</div>
+              <p style={{ fontSize: 20, lineHeight: 1.35, marginTop: 8 }}>
+                Paying {myFee.toFixed(2)}% instead of the {cheapFee.toFixed(2)}% charged by the cheapest quarter of funds
+                could cost you about{" "}
+                <strong className="mono" style={{ color: "var(--clay)" }}>{formatFull(lifetimeFeeDrag)}</strong>{" "}
+                {age >= retireAge ? "over your retirement" : `in fees by age ${retireAge}`}.
+              </p>
+            </div>
+          )}
+
           {selected?.performanceTest && (
             <div style={{
               marginTop: 8, padding: "10px 14px", borderRadius: 8,
@@ -257,19 +270,6 @@ export default function Tool() {
         plannedRetireAge={retireAge}
         inflation={inflation}
       />
-
-      {/* Fee drag callout */}
-      {feeGapAnnual > 0.01 && (
-        <div className="fee-drag">
-          <div className="eyebrow" style={{ color: "var(--clay)" }}>The cost of higher fees</div>
-          <p style={{ fontSize: 22, lineHeight: 1.35, marginTop: 8 }}>
-            Paying {myFee.toFixed(2)}% instead of the {cheapFee.toFixed(2)}% charged by the cheapest quarter of funds
-            could cost you about{" "}
-            <strong className="mono" style={{ color: "var(--clay)" }}>{formatFull(lifetimeFeeDrag)}</strong>{" "}
-            in fees by age {retireAge}.
-          </p>
-        </div>
-      )}
 
       {/* Insurance acknowledgement */}
       <div className="insurance-note">
