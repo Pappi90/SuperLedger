@@ -5,16 +5,26 @@ export default function Home() {
   const best = [...funds].sort((a, b) => (b.nir5yr ?? 0) - (a.nir5yr ?? 0))[0];
 
   // Real lifetime cost of the fee gap between the cheapest and most expensive
-  // MySuper fund, on a representative career (30 → 67, $30k start, $90k salary,
-  // 12% SG, 7% net). Data-driven so the headline figure is never invented.
+  // MySuper fund. We use the LOST-COMPOUNDING method: every dollar paid in fees
+  // is also a dollar that would have kept earning returns for decades, so the true
+  // cost is the gap between two parallel balances — one paying the high fee, one
+  // the low fee — over a full career. This is more honest than counting fees alone.
   const feeGap = benchmark.totalFee50k.max - benchmark.totalFee50k.min;
   const lifetimeGap = (() => {
-    let bal = 30000, drag = 0;
-    const sg = 90000 * 0.12;
-    for (let y = 0; y < 37; y++) { drag += bal * (feeGap / 100); bal = bal * 1.07 + sg; }
-    return Math.round(drag);
+    const grossReturn = 8; // ~net median + typical fee, so net = gross − fee
+    const highFee = benchmark.totalFee50k.max;
+    const lowFee = benchmark.totalFee50k.min;
+    const salary = 90000, sg = salary * 0.12, years = 37; // age 30 → 67
+    let balHigh = 30000, balLow = 30000;
+    for (let y = 0; y < years; y++) {
+      balHigh = balHigh * (1 + (grossReturn - highFee) / 100) + sg;
+      balLow = balLow * (1 + (grossReturn - lowFee) / 100) + sg;
+    }
+    return Math.round(balLow - balHigh);
   })();
   const lifetimeGapLabel = "$" + Math.round(lifetimeGap / 1000) + "k";
+  // Relatable anchor: years of a comfortable single retirement (ASFA annual spend)
+  const retirementYears = (lifetimeGap / 55923).toFixed(1);
 
   return (
     <main>
@@ -36,11 +46,13 @@ export default function Home() {
           <div className="hero-hook">
             <span className="hook-fig mono">{lifetimeGapLabel}</span>
             <span className="hook-text">
-              is the gap in fees alone between Australia&apos;s cheapest and most expensive MySuper fund,
-              over a typical working life. Most people have no idea which side they&apos;re on.
+              is the gap between Australia&apos;s cheapest and most expensive MySuper fund over a working life —
+              about <strong style={{ color: "var(--ink)" }}>{retirementYears} years of a comfortable retirement</strong>,
+              lost to fees. Most people have no idea which side they&apos;re on.
               <span className="hook-note">
-                Based on the {feeGap.toFixed(2)}-point fee gap applied over a 37-year career
-                ($30k starting balance, $90k salary, 12% super, 7% returns). Illustrative, not a forecast.
+                The {feeGap.toFixed(2)}-point fee gap, compounded over a 37-year career ($30k starting balance,
+                $90k salary, 12% super, 8% gross return). Counts the growth those fees would have earned too —
+                not just the fees themselves. Illustrative, not a forecast.
               </span>
             </span>
           </div>

@@ -46,20 +46,23 @@ export default function Tool() {
   // APRA's representative-member figure, consistent with the headline metric above.
   const netForProjection = myNetReturn;
 
-  // lifetime fee drag vs cheapest quartile fund
+  // lifetime fee drag vs cheapest quartile fund — using the LOST-COMPOUNDING method:
+  // model two parallel balances (one paying your fee, one the cheap-quartile fee) and
+  // take the gap at retirement. This captures the growth those fees would have earned,
+  // not just the fees paid — the honest, larger, and correct measure.
   const cheapFee = benchmark.totalFee50k.p25;
   const feeGapAnnual = Math.max(0, myFee - cheapFee);
   const years = Math.max(1, retireAge - age);
   const lifetimeFeeDrag = useMemo(() => {
-    // rough: extra fee % applied to average balance over time
-    let b = balance, drag = 0;
     const r = netForProjection / 100;
+    const rCheap = (netForProjection + feeGapAnnual) / 100; // cheaper fund keeps the fee gap as return
     const sg = salary * (employerRate / 100);
+    let bMine = balance, bCheap = balance;
     for (let y = 0; y < years; y++) {
-      drag += b * (feeGapAnnual / 100);
-      b = b * (1 + r) + sg + extra * 12;
+      bMine = bMine * (1 + r) + sg + extra * 12;
+      bCheap = bCheap * (1 + rCheap) + sg + extra * 12;
     }
-    return Math.round(drag);
+    return Math.round(bCheap - bMine);
   }, [balance, netForProjection, feeGapAnnual, years, salary, extra, employerRate]);
 
   // Net-return context: fees only tell half the story. A higher-fee fund can still
@@ -200,13 +203,14 @@ export default function Tool() {
             <div className="fee-drag" style={{ marginTop: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                 <span className="eyebrow" style={{ color: "var(--clay)" }}>What those fees cost you</span>
-                <InfoDot tip={`How this is worked out: your fund's fee (${myFee.toFixed(2)}%) minus the cheapest quarter of funds (${cheapFee.toFixed(2)}%) = ${feeGapAnnual.toFixed(2)}% a year. That gap is applied to your balance every year from now until age ${retireAge}, as your balance grows with contributions and returns. It's an estimate to show the scale of fee differences, not a precise forecast.`} />
+                <InfoDot tip={`How this is worked out: we compare two versions of your super to retirement — one paying your fund's fee (${myFee.toFixed(2)}%), one paying the cheapest quarter of funds (${cheapFee.toFixed(2)}%). The ${feeGapAnnual.toFixed(2)}% yearly gap compounds: every dollar lost to fees is also a dollar that stops earning returns for the rest of your working life, so the real cost is far bigger than the fees alone. An estimate of scale, not a precise forecast.`} />
               </div>
               <p style={{ fontSize: 20, lineHeight: 1.35 }}>
                 Paying {myFee.toFixed(2)}% instead of the {cheapFee.toFixed(2)}% charged by the cheapest quarter of funds
-                could cost you about{" "}
+                could leave you about{" "}
                 <strong className="mono" style={{ color: "var(--clay)" }}>{formatFull(lifetimeFeeDrag)}</strong>{" "}
-                {age >= retireAge ? "over your retirement" : `in fees by age ${retireAge}`}.
+                {age >= retireAge ? "worse off over your retirement" : `worse off by age ${retireAge}`} — counting the
+                growth those fees would have earned, not just the fees themselves.
               </p>
               {strongDespiteFees ? (
                 <p style={{ fontSize: 14, lineHeight: 1.5, marginTop: 12, padding: "12px 14px", background: "var(--green-soft)", borderRadius: 8, color: "var(--green)" }}>
