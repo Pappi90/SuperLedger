@@ -8,6 +8,7 @@ import BalanceBenchmark from "./BalanceBenchmark";
 import OnTrack from "./OnTrack";
 import Drawdown from "./Drawdown";
 import FeeCurve from "./FeeCurve";
+import FundPicker from "./FundPicker";
 
 const fmt = (n: number) => n.toLocaleString("en-AU");
 
@@ -125,20 +126,7 @@ export default function Tool() {
       {/* Fund selector */}
       <div style={{ marginTop: 28, marginBottom: 8 }}>
         <label className="eyebrow" style={{ display: "block", marginBottom: 8 }}>Your fund</label>
-        <select
-          value={fundIdx}
-          onChange={(e) => setFundIdx(Number(e.target.value))}
-          style={{
-            width: "100%", padding: "12px 14px", fontFamily: "inherit", fontSize: 16,
-            background: "var(--paper-raised)", border: "1px solid var(--rule-strong)",
-            borderRadius: 8, color: "var(--ink)",
-          }}
-        >
-          <option value={-1}>Not sure / enter manually</option>
-          {funds.map((f, i) => (
-            <option key={i} value={i}>{f.fund} — {f.product}</option>
-          ))}
-        </select>
+        <FundPicker value={fundIdx} onChange={setFundIdx} />
       </div>
 
       {fundIdx === -1 && (
