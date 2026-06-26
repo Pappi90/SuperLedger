@@ -40,11 +40,16 @@ export default function AuthGate({
   hero: ReactNode;
   footer: ReactNode;
 }) {
-  const supabase = createClient();
+  // Create the Supabase browser client lazily, once, on the client only.
+  // Using a useState initializer (rather than calling createClient() directly in
+  // the render body) guarantees it never runs during a server/prerender pass —
+  // which is where the "URL and API key required" build error came from.
+  const [supabase] = useState(() => createClient());
   const [status, setStatus] = useState<"loading" | "in" | "out">("loading");
   const [alias, setAlias] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!supabase) { setStatus("out"); return; }
     let active = true;
     supabase.auth.getUser().then(({ data }) => {
       if (!active) return;
@@ -60,6 +65,16 @@ export default function AuthGate({
       sub.subscription.unsubscribe();
     };
   }, [supabase]);
+
+  if (!supabase) {
+    return (
+      <main className="wrap" style={{ padding: "80px 28px", color: "var(--clay)", lineHeight: 1.6 }}>
+        Sign-in isn&apos;t configured yet. (The app&apos;s connection keys aren&apos;t loaded.)
+        If you&apos;re the site owner, check the Supabase environment variables are set for this
+        project in Vercel.
+      </main>
+    );
+  }
 
   if (status === "loading") {
     return (
@@ -78,7 +93,7 @@ export default function AuthGate({
       <div className="wrap" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, paddingTop: 16 }}>
         {alias && <span className="mono" style={{ fontSize: 13, color: "var(--ink-faint)" }}>@{alias}</span>}
         <button
-          onClick={async () => { await supabase.auth.signOut(); }}
+          onClick={async () => { if (supabase) await supabase.auth.signOut(); }}
           style={{ fontSize: 13, color: "var(--ink-soft)", background: "transparent", border: "1px solid var(--rule-strong)", borderRadius: 8, padding: "6px 12px" }}>
           Sign out
         </button>

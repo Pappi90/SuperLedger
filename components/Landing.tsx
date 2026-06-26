@@ -32,7 +32,9 @@ type HookData = {
 };
 
 export default function Landing({ hooks }: { hooks: HookData }) {
-  const supabase = createClient();
+  // Lazy, client-only Supabase client (see AuthGate for why — avoids the
+  // prerender-time "URL and API key required" error).
+  const [supabase] = useState(() => createClient());
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,6 +50,10 @@ export default function Landing({ hooks }: { hooks: HookData }) {
       : email.trim() !== "" && password.length >= 10 && cleanAlias !== "";
 
   async function handleSubmit() {
+    if (!supabase) {
+      setError("Sign-in isn't configured yet. Please try again later.");
+      return;
+    }
     setError(null);
     setNotice(null);
     setBusy(true);

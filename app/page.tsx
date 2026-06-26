@@ -1,6 +1,14 @@
 import AuthGate from "@/components/AuthGate";
 import { benchmark, funds } from "@/lib/super";
 
+// Render this page dynamically instead of pre-rendering it at build time.
+// AuthGate is a client component that creates a Supabase client; static
+// pre-rendering tries to run that at build time (where the request-scoped
+// environment isn't available), which throws. Forcing dynamic rendering means
+// the Supabase client is only ever created in the browser, where the
+// NEXT_PUBLIC_ vars are present. This is the correct mode for an auth-gated app.
+export const dynamic = "force-dynamic";
+
 /**
  * page.tsx — SuperLedger
  *
