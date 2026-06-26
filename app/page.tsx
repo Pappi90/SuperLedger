@@ -93,26 +93,17 @@ export default function Home() {
           <div className="hook-row">
             <div className="hero-hook">
               <span className="hook-fig mono">{netGapLabel}</span>
-              <span className="hook-text">
-                is the all-in difference a fund&apos;s <strong style={{ color: "var(--ink)" }}>performance</strong> has
-                made over a working life — top 10% versus bottom 20%, after fees. Returns are the bigger lever.
-                <span className="hook-note">
-                  Net-return spread ({netGap.bottom20.toFixed(1)}% to {netGap.top10.toFixed(1)}%) over the last 5 years,
-                  compounded over a 37-year career. Past performance doesn&apos;t predict future returns — this shows
-                  why the choice matters, not a gain you can count on. Illustrative, not a forecast.
-                </span>
+              <span className="hook-label">difference between top 10% and bottom 20% funds over a working life</span>
+              <span className="hook-note">
+                Net-return spread ({netGap.bottom20.toFixed(1)}%–{netGap.top10.toFixed(1)}%), 37-yr career. Illustrative.
               </span>
             </div>
 
             <div className="hero-hook hook-fees">
               <span className="hook-fig mono">{lifetimeGapLabel}</span>
-              <span className="hook-text">
-                of that is just <strong style={{ color: "var(--ink)" }}>fees</strong> — about {retirementYears} years
-                of a comfortable retirement, between the cheapest and priciest fund. And fees are the part you control.
-                <span className="hook-note">
-                  The {feeGap.toFixed(2)}-point fee gap, compounded over the same career. Counts the growth those fees
-                  would have earned too, not just the fees themselves. Illustrative, not a forecast.
-                </span>
+              <span className="hook-label">lost to <strong>fees alone</strong> — about {retirementYears} yrs of retirement income</span>
+              <span className="hook-note">
+                Fee gap of {feeGap.toFixed(2)}%, compounded over 37 years. Illustrative, not a forecast.
               </span>
             </div>
           </div>
@@ -130,16 +121,16 @@ export default function Home() {
         .hero-title { font-size: clamp(34px, 6vw, 58px); margin: 20px 0 24px; max-width: 18ch; letter-spacing: -0.015em; }
         .ital { font-style: italic; color: var(--green); }
         .hero-sub { font-size: 19px; color: var(--ink-soft); max-width: 62ch; line-height: 1.62; }
-        .hook-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; max-width: 1000px; }
-        .hero-hook { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 22px;
-          padding: 24px 26px; background: var(--paper-raised); border: 1px solid var(--rule-strong);
+        .hook-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 40px; max-width: 760px; }
+        .hero-hook { display: flex; flex-direction: column; gap: 6px;
+          padding: 20px 22px; background: var(--paper-raised); border: 1px solid var(--rule-strong);
           border-left: 4px solid var(--green); border-radius: 12px; }
         .hook-fees { border-left-color: var(--clay); }
-        .hook-fig { font-size: clamp(34px, 4.5vw, 50px); font-weight: 600; color: var(--green);
-          line-height: 0.95; letter-spacing: -0.02em; }
+        .hook-fig { font-size: clamp(30px, 4vw, 44px); font-weight: 600; color: var(--green);
+          line-height: 1; letter-spacing: -0.02em; }
         .hook-fees .hook-fig { color: var(--clay); }
-        .hook-text { font-size: 14.5px; color: var(--ink-soft); line-height: 1.5; }
-        .hook-note { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 8px; line-height: 1.5; }
+        .hook-label { font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; }
+        .hook-note { font-size: 11px; color: var(--ink-faint); line-height: 1.45; }
         @media (max-width: 860px) { .hook-row { grid-template-columns: 1fr; } }
         .hero-stats { display: flex; gap: 48px; margin-top: 44px; flex-wrap: wrap; }
         section.wrap { padding-top: 48px; }
