@@ -26,6 +26,32 @@ export default function Home() {
   // Relatable anchor: years of a comfortable single retirement (ASFA annual spend)
   const retirementYears = (lifetimeGap / 55923).toFixed(1);
 
+  // Net-return spread: the all-in difference a fund's performance makes, top 10%
+  // vs bottom 20%, AFTER all fees. This is the historical spread — net returns are
+  // far less persistent than fees, so it illustrates why the choice matters rather
+  // than promising the gap can be captured by chasing past winners.
+  const netGap = (() => {
+    const nets = funds
+      .map((f) => {
+        if (f.strategy !== "Lifecycle" || !f.stages?.length) return f.net5yr;
+        const s = f.stages.find((x) => x.ageFrom <= 40 && x.ageTo >= 40) ?? f.stages[0];
+        return s.net5yr;
+      })
+      .filter((v): v is number => v !== null)
+      .sort((a, b) => a - b);
+    const pctl = (p: number) => {
+      const idx = (p / 100) * (nets.length - 1);
+      const lo = Math.floor(idx), hi = Math.ceil(idx);
+      return nets[lo] + (nets[hi] - nets[lo]) * (idx - lo);
+    };
+    const bottom20 = pctl(20), top10 = pctl(90);
+    const sg = 90000 * 0.12;
+    let bTop = 30000, bBot = 30000;
+    for (let y = 0; y < 37; y++) { bTop = bTop * (1 + top10 / 100) + sg; bBot = bBot * (1 + bottom20 / 100) + sg; }
+    return { amount: Math.round(bTop - bBot), bottom20, top10 };
+  })();
+  const netGapLabel = "$" + (netGap.amount / 1000000).toFixed(1) + "m";
+
   return (
     <main>
       {/* Hero */}
@@ -43,18 +69,31 @@ export default function Home() {
             No sign-up. No advice. Just the numbers.
           </p>
 
-          <div className="hero-hook">
-            <span className="hook-fig mono">{lifetimeGapLabel}</span>
-            <span className="hook-text">
-              is the gap between Australia&apos;s cheapest and most expensive MySuper fund over a working life —
-              about <strong style={{ color: "var(--ink)" }}>{retirementYears} years of a comfortable retirement</strong>,
-              lost to fees. Most people have no idea which side they&apos;re on.
-              <span className="hook-note">
-                The {feeGap.toFixed(2)}-point fee gap, compounded over a 37-year career ($30k starting balance,
-                $90k salary, 12% super, 8% gross return). Counts the growth those fees would have earned too —
-                not just the fees themselves. Illustrative, not a forecast.
+          <div className="hook-row">
+            <div className="hero-hook">
+              <span className="hook-fig mono">{netGapLabel}</span>
+              <span className="hook-text">
+                is the all-in difference a fund&apos;s <strong style={{ color: "var(--ink)" }}>performance</strong> has
+                made over a working life — top 10% versus bottom 20%, after fees. Returns are the bigger lever.
+                <span className="hook-note">
+                  Net-return spread ({netGap.bottom20.toFixed(1)}% to {netGap.top10.toFixed(1)}%) over the last 5 years,
+                  compounded over a 37-year career. Past performance doesn&apos;t predict future returns — this shows
+                  why the choice matters, not a gain you can count on. Illustrative, not a forecast.
+                </span>
               </span>
-            </span>
+            </div>
+
+            <div className="hero-hook hook-fees">
+              <span className="hook-fig mono">{lifetimeGapLabel}</span>
+              <span className="hook-text">
+                of that is just <strong style={{ color: "var(--ink)" }}>fees</strong> — about {retirementYears} years
+                of a comfortable retirement, between the cheapest and priciest fund. And fees are the part you control.
+                <span className="hook-note">
+                  The {feeGap.toFixed(2)}-point fee gap, compounded over the same career. Counts the growth those fees
+                  would have earned too, not just the fees themselves. Illustrative, not a forecast.
+                </span>
+              </span>
+            </div>
           </div>
 
           <div className="hero-stats">
@@ -86,14 +125,17 @@ export default function Home() {
         .hero-title { font-size: clamp(34px, 6vw, 58px); margin: 20px 0 24px; max-width: 18ch; letter-spacing: -0.015em; }
         .ital { font-style: italic; color: var(--green); }
         .hero-sub { font-size: 19px; color: var(--ink-soft); max-width: 62ch; line-height: 1.62; }
-        .hero-hook { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 24px;
-          margin-top: 40px; padding: 26px 28px; max-width: 62ch;
-          background: var(--paper-raised); border: 1px solid var(--rule-strong);
-          border-left: 4px solid var(--clay); border-radius: 12px; }
-        .hook-fig { font-size: clamp(40px, 6vw, 56px); font-weight: 600; color: var(--clay);
+        .hook-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; max-width: 1000px; }
+        .hero-hook { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 22px;
+          padding: 24px 26px; background: var(--paper-raised); border: 1px solid var(--rule-strong);
+          border-left: 4px solid var(--green); border-radius: 12px; }
+        .hook-fees { border-left-color: var(--clay); }
+        .hook-fig { font-size: clamp(34px, 4.5vw, 50px); font-weight: 600; color: var(--green);
           line-height: 0.95; letter-spacing: -0.02em; }
-        .hook-text { font-size: 15px; color: var(--ink-soft); line-height: 1.55; }
-        .hook-note { display: block; font-size: 12px; color: var(--ink-faint); margin-top: 8px; line-height: 1.5; }
+        .hook-fees .hook-fig { color: var(--clay); }
+        .hook-text { font-size: 14.5px; color: var(--ink-soft); line-height: 1.5; }
+        .hook-note { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 8px; line-height: 1.5; }
+        @media (max-width: 860px) { .hook-row { grid-template-columns: 1fr; } }
         .hero-stats { display: flex; gap: 48px; margin-top: 44px; flex-wrap: wrap; }
         .foot { border-top: 1px solid var(--rule); padding: 32px 0 60px; margin-top: 56px; }
         section.wrap { padding-top: 48px; }
