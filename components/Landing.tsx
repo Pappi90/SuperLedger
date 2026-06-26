@@ -218,17 +218,18 @@ export default function Landing({
         .lhero-sub { font-size: 18px; color: var(--ink-soft); max-width: 34ch; line-height: 1.6; }
 
         .hook-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; }
-        .lhook { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 20px;
-          padding: 20px 22px; background: var(--paper-raised); border: 1px solid var(--rule-strong);
+        .lhook { display: flex; flex-direction: column; gap: 12px;
+          padding: 22px 22px 20px; background: var(--paper-raised); border: 1px solid var(--rule-strong);
           border-left: 4px solid var(--green); border-radius: 12px; }
         .hook-fees { border-left-color: var(--clay); }
-        .hook-fig { font-size: clamp(30px, 4vw, 44px); font-weight: 600; color: var(--green);
-          line-height: 0.95; letter-spacing: -0.02em; }
+        .hook-fig { font-size: clamp(34px, 5vw, 46px); font-weight: 600; color: var(--green);
+          line-height: 1; letter-spacing: -0.02em; }
         .hook-fees .hook-fig { color: var(--clay); }
-        .hook-text { font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
-        .hook-note { display: block; font-size: 11px; color: var(--ink-faint); margin-top: 8px; line-height: 1.5; }
+        .hook-text { font-size: 14px; color: var(--ink-soft); line-height: 1.55; }
+        .hook-note { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 10px;
+          padding-top: 10px; border-top: 1px dotted var(--rule); line-height: 1.5; }
         .hook-framing { font-size: 13.5px; color: var(--ink-faint); font-style: italic; margin-top: 14px; }
-        @media (max-width: 560px) { .hook-row { grid-template-columns: 1fr; } .lhook { grid-template-columns: 1fr; gap: 8px; } }
+        @media (max-width: 560px) { .hook-row { grid-template-columns: 1fr; } }
 
         .trustline { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 26px;
           font-size: 11px; color: var(--ink-faint); letter-spacing: 0.04em; }
