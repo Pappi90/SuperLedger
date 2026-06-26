@@ -20,6 +20,7 @@
  */
 
 import { useState } from "react";
+import LegalDisclaimer from "./LegalDisclaimer";
 
 type HookData = {
   netGapLabel: string;
@@ -80,7 +81,9 @@ export default function Landing({
                     Net-return spread ({hooks.bottom20.toFixed(1)}% to {hooks.top10.toFixed(1)}%)
                     over the last 5 years, compounded over a 37-year career. Past performance
                     doesn&apos;t predict future returns — this shows why the choice matters, not a
-                    gain you can count on. Illustrative, not a forecast.
+                    gain you can count on. Illustrative, not a forecast. Figures are future
+                    (nominal) dollars, not discounted to today&apos;s value; the tool below shows
+                    today&apos;s-dollar equivalents for your own projection.
                   </span>
                 </span>
               </div>
@@ -94,7 +97,8 @@ export default function Landing({
                   <span className="hook-note">
                     The {hooks.feeGap.toFixed(2)}-point fee gap, compounded over the same career.
                     Counts the growth those fees would have earned too, not just the fees
-                    themselves. Illustrative, not a forecast.
+                    themselves. Illustrative, not a forecast. Future (nominal) dollars; the
+                    tool below shows today&apos;s-dollar equivalents.
                   </span>
                 </span>
               </div>
@@ -201,6 +205,8 @@ export default function Landing({
             <p className="fineprint mono">
               General information only · not personal financial advice
             </p>
+
+            <LegalDisclaimer compact />
           </div>
         </div>
       </header>

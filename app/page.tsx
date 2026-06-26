@@ -100,6 +100,8 @@ export default function Home() {
                   Net-return spread ({netGap.bottom20.toFixed(1)}% to {netGap.top10.toFixed(1)}%) over the last 5 years,
                   compounded over a 37-year career. Past performance doesn&apos;t predict future returns — this shows
                   why the choice matters, not a gain you can count on. Illustrative, not a forecast.
+                  Future (nominal) dollars, not discounted to today&apos;s value; today&apos;s-dollar
+                  equivalents are shown in your projection below.
                 </span>
               </span>
             </div>
@@ -112,6 +114,7 @@ export default function Home() {
                 <span className="hook-note">
                   The {feeGap.toFixed(2)}-point fee gap, compounded over the same career. Counts the growth those fees
                   would have earned too, not just the fees themselves. Illustrative, not a forecast.
+                  Future (nominal) dollars; today&apos;s-dollar equivalents shown in your projection below.
                 </span>
               </span>
             </div>

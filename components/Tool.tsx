@@ -9,6 +9,7 @@ import OnTrack from "./OnTrack";
 import Drawdown from "./Drawdown";
 import FeeCurve from "./FeeCurve";
 import FundPicker from "./FundPicker";
+import LegalDisclaimer from "./LegalDisclaimer";
 
 const fmt = (n: number) => n.toLocaleString("en-AU");
 
@@ -24,20 +25,49 @@ export default function Tool() {
   const [fundIdx, setFundIdx] = useState<number>(-1);
   const [manualReturn, setManualReturn] = useState(7.5);
   const [manualFee, setManualFee] = useState(0.9);
+  // User overrides for a SELECTED fund's assumptions (null = use APRA default).
+  // Required so every assumption stays editable — see ASIC note below.
+  const [overrideReturn, setOverrideReturn] = useState<number | null>(null);
+  const [overrideFee, setOverrideFee] = useState<number | null>(null);
+  // Controls the in-tool "top-performing alternatives" directory panel.
+  const [showDirectory, setShowDirectory] = useState(false);
 
   const selected = fundIdx >= 0 ? funds[fundIdx] : null;
   const ageFigures = selected ? fundFiguresAtAge(selected, age) : null;
-  const myReturn = ageFigures?.nir5yr ?? selected?.nir5yr ?? manualReturn;
+
+  // --- Editable assumptions (ASIC generic-calculator condition) ---------------
+  // ASIC Instrument 2026/41 / RG 276: to remain a generic calculator (no AFSL),
+  // EVERY default assumption must be user-editable — including return and fee,
+  // even after a fund is selected. Locking these to the APRA figure would make
+  // the output a tailored personal recommendation. So the APRA figure is only
+  // the DEFAULT; if the user adjusts the override, their value takes precedence.
+  // `overrideReturn`/`overrideFee` are null until the user deliberately edits.
+  const apraReturn = ageFigures?.nir5yr ?? selected?.nir5yr ?? null;
+  const apraFee50k = ageFigures?.totalFee50k ?? selected?.totalFee50k ?? null;
+
+  // The figure actually used: user override if set, else APRA, else manual entry.
+  const myReturn = overrideReturn ?? apraReturn ?? manualReturn;
+  const myFee50k = overrideFee ?? apraFee50k ?? manualFee;
+
   // Fee at the user's actual balance tier (fairer to both user and fund), with
   // the $50k figure kept for the percentile ranking so all funds compare consistently.
+  // When the user has overridden the fee, honour the override across all tiers.
   const feeCurve = ageFigures?.feeCurve ?? null;
-  const balanceFee = feeCurve ? feeAtBalance(feeCurve, balance) : null;
-  const myFee50k = ageFigures?.totalFee50k ?? selected?.totalFee50k ?? manualFee;
+  const balanceFee = feeCurve && overrideFee == null ? feeAtBalance(feeCurve, balance) : null;
   const myFee = balanceFee?.fee ?? myFee50k;
   const myFeeTier = balanceFee?.tier ?? 50000;
   // All-in net return (after investment AND admin fees). For a manually-entered
   // fund we approximate it as the entered return minus the admin portion of the fee.
-  const myNetReturn = ageFigures?.net5yr ?? selected?.net5yr ?? Math.max(0, manualReturn - manualFee);
+  // When the user overrides return and/or fee, the net follows their assumptions.
+  const apraNet = ageFigures?.net5yr ?? selected?.net5yr ?? null;
+  const myNetReturn =
+    overrideReturn != null || overrideFee != null
+      ? Math.max(0, myReturn - (overrideFee ?? 0))
+      : apraNet ?? Math.max(0, manualReturn - manualFee);
+
+  // When the user switches funds, clear any assumption overrides so the new
+  // fund starts from its own APRA defaults (not the previous fund's override).
+  useEffect(() => { setOverrideReturn(null); setOverrideFee(null); }, [fundIdx]);
 
   const returnPct = useMemo(() => percentileRank(myReturn, fundReturns(), true), [myReturn]);
   const feePct = useMemo(() => percentileRank(myFee50k, fundFees(), false), [myFee50k]);
@@ -129,10 +159,41 @@ export default function Tool() {
         <FundPicker value={fundIdx} onChange={setFundIdx} />
       </div>
 
-      {fundIdx === -1 && (
+      {fundIdx === -1 ? (
         <div className="grid-inputs" style={{ marginTop: 16 }}>
           <Field label="Your fund's 5yr return %" value={manualReturn} onChange={setManualReturn} min={3} max={14} step={0.1} suffix="%" />
           <Field label="Your annual fee %" value={manualFee} onChange={setManualFee} min={0.05} max={2} step={0.05} suffix="%" />
+        </div>
+      ) : (
+        <div style={{ marginTop: 16 }}>
+          <div className="grid-inputs">
+            <Field
+              label="Return assumption %"
+              value={myReturn}
+              onChange={setOverrideReturn}
+              min={3} max={14} step={0.1} suffix="%"
+              tooltip="Pre-filled from this fund's official APRA 5-year net return. You can adjust it — these are illustrative assumptions you control, not a fixed figure or a recommendation." />
+            <Field
+              label="Fee assumption %"
+              value={myFee50k}
+              onChange={setOverrideFee}
+              min={0.05} max={2} step={0.05} suffix="%"
+              tooltip="Pre-filled from this fund's official APRA fee. You can adjust it — for example to model a different fee tier or scenario. These assumptions are yours to change." />
+          </div>
+          {(overrideReturn != null || overrideFee != null) && (
+            <button
+              onClick={() => { setOverrideReturn(null); setOverrideFee(null); }}
+              style={{
+                marginTop: 10, fontSize: 12.5, color: "var(--ink-faint)", background: "transparent",
+                border: "none", textDecoration: "underline", textUnderlineOffset: 3, padding: 0,
+              }}>
+              Reset to APRA figures
+            </button>
+          )}
+          <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 10, lineHeight: 1.5 }}>
+            These start from {selected ? `${selected.fund} — ${selected.product}` : "your fund"}&apos;s official APRA figures and are fully
+            adjustable. SuperLedger doesn&apos;t recommend funds or set these for you — the assumptions are yours.
+          </p>
         </div>
       )}
 
@@ -231,6 +292,14 @@ export default function Tool() {
             </div>
           )}
 
+          {selected && (
+            <TopPerformersDirectory
+              open={showDirectory}
+              onToggle={() => setShowDirectory((s) => !s)}
+              age={age}
+            />
+          )}
+
           {ageFigures?.isLifecycle && (
             <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 10, lineHeight: 1.5 }}>
               This is a lifecycle fund — figures shown are for your life stage ({ageFigures.stageLabel}),
@@ -303,14 +372,14 @@ export default function Tool() {
         </p>
       </div>
 
-      <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 28, lineHeight: 1.6 }}>
-        General information only, not financial advice. Returns shown are APRA&apos;s published net
-        figures (the headline metric is the all-in net return after both investment and admin fees,
-        for a representative $50,000 member). Projections use simplified compounding and assume a 12%
-        Super Guarantee rate; they don&apos;t account for tax, insurance premiums, or future contribution
-        changes. Past performance does not predict future returns. Based on APRA&apos;s Comprehensive
-        Product Performance Package (MySuper, 30 June 2025). Consider the fund&apos;s PDS and your own
-        circumstances, or speak to a licensed adviser.
+      <LegalDisclaimer />
+
+      <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 16, lineHeight: 1.6 }}>
+        Returns shown are APRA&apos;s published net figures (the headline metric is the all-in net
+        return after both investment and admin fees, for a representative $50,000 member).
+        Projections use simplified compounding and assume a 12% Super Guarantee rate; they
+        don&apos;t account for tax, insurance premiums, or future contribution changes. Based on
+        APRA&apos;s Comprehensive Product Performance Package (MySuper, 30 June 2025).
       </p>
 
       <style>{`
@@ -324,6 +393,91 @@ export default function Tool() {
           border: 1px solid var(--rule); box-shadow: 0 1px 2px rgba(26,25,22,0.03); }
         @media (max-width: 760px) { .results { grid-template-columns: 1fr; } .card { padding: 24px; } }
       `}</style>
+    </div>
+  );
+}
+
+// --- Compliant "top-performing alternatives" directory -----------------------
+// AFSL consult (ASIC Instrument 2026/41): a dynamic CTA promoting a SPECIFIC
+// fund the user should switch to = "arranging to deal" in a financial product,
+// which needs an AFSL. To keep generic-calculator relief, this is instead a
+// NEUTRAL, factual directory of ALL top performers ranked strictly by public
+// APRA net return — no algorithmic favouring of any fund, no "switch to X".
+// Button wording is the lawyer's required text, verbatim. The referral notice
+// is the APP-5 collection notice required at the point of any outbound click.
+function TopPerformersDirectory({ open, onToggle, age }: { open: boolean; onToggle: () => void; age: number }) {
+  // Rank every fund strictly by all-in net return (the headline metric), age-aware
+  // for lifecycle funds. No fee/referral weighting — order is purely the public data.
+  const ranked = useMemo(() => {
+    return funds
+      .map((f) => {
+        const fig = fundFiguresAtAge(f, age);
+        return {
+          name: f.product || f.fund,
+          trustee: f.trustee,
+          net: fig.net5yr ?? f.net5yr,
+          pass: f.performanceTest,
+        };
+      })
+      .filter((r): r is { name: string; trustee: string; net: number; pass: string | null } => r.net !== null)
+      .sort((a, b) => b.net - a.net)
+      .slice(0, 10);
+  }, [age]);
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <button
+        onClick={onToggle}
+        style={{
+          fontSize: 13.5, fontWeight: 600, color: "var(--ink)", background: "var(--brass-soft)",
+          border: "1px solid var(--rule-strong)", borderRadius: 8, padding: "10px 14px", width: "100%",
+          textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
+        }}>
+        <span>View official APRA data for top-performing alternatives</span>
+        <span style={{ color: "var(--ink-faint)" }}>{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          marginTop: 8, border: "1px solid var(--rule)", borderRadius: 8, overflow: "hidden",
+          background: "var(--paper-raised)",
+        }}>
+          <p style={{ fontSize: 12, color: "var(--ink-faint)", padding: "12px 14px 4px", lineHeight: 1.5 }}>
+            All MySuper products ranked by their official APRA 5-year net return (after all fees),
+            for your age. This is the public data, ordered objectively — SuperLedger does not
+            rank funds by any commercial arrangement and does not recommend a fund.
+          </p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: "left", color: "var(--ink-faint)", fontSize: 11 }}>
+                <th style={{ padding: "6px 14px", fontWeight: 600 }}>#</th>
+                <th style={{ padding: "6px 8px", fontWeight: 600 }}>Product</th>
+                <th style={{ padding: "6px 14px", fontWeight: 600, textAlign: "right" }}>Net return</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ranked.map((r, i) => (
+                <tr key={r.name} style={{ borderTop: "1px solid var(--rule)" }}>
+                  <td className="mono" style={{ padding: "8px 14px", color: "var(--ink-faint)" }}>{i + 1}</td>
+                  <td style={{ padding: "8px 8px" }}>
+                    {r.name}
+                    {r.pass === "Pass" && <span style={{ color: "var(--green)", marginLeft: 6, fontSize: 11 }}>✓ APRA pass</span>}
+                  </td>
+                  <td className="mono" style={{ padding: "8px 14px", textAlign: "right", fontWeight: 600 }}>{r.net.toFixed(2)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* APP-5 referral collection notice — required wording at point of click. */}
+          <p style={{ fontSize: 11.5, color: "var(--ink-faint)", padding: "12px 14px", lineHeight: 1.55, borderTop: "1px solid var(--rule)", background: "var(--paper)" }}>
+            Some funds may be linked to an external partner. If you click through and open an
+            account, SuperLedger may receive a referral fee. This does not affect the ranking above,
+            which is based solely on APRA data. No identifying financial data has been or ever will
+            be shared with any partner. Past performance is not a reliable indicator of future returns.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -420,8 +574,7 @@ function Field({
   );
 }
 
-function InfoDot({ tip }: { tip: string }) {
-  const [show, setShow] = useState(false);
+function InfoDot({ tip }: { tip: string }) {  const [show, setShow] = useState(false);
   return (
     <span
       role="button"
