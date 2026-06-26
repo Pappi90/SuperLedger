@@ -1,9 +1,19 @@
-import Tool from "@/components/Tool";
+import AuthGate from "@/components/AuthGate";
 import { benchmark, funds } from "@/lib/super";
 
-export default function Home() {
-  const best = [...funds].sort((a, b) => (b.nir5yr ?? 0) - (a.nir5yr ?? 0))[0];
+/**
+ * page.tsx — SuperLedger
+ *
+ * Phase 2 change: the full tool now sits behind a front-door landing/signup
+ * VIEW (see components/AuthGate.tsx — note it is a UX shell, NOT real auth yet).
+ *
+ * This server component still computes the two hero "hook" figures exactly as
+ * before — same lost-compounding and net-spread methodology — and passes them
+ * to both the landing view (as a teaser) and the authenticated hero (unchanged).
+ * Nothing about the numbers has changed; only where they're rendered.
+ */
 
+export default function Home() {
   // Real lifetime cost of the fee gap between the cheapest and most expensive
   // MySuper fund. We use the LOST-COMPOUNDING method: every dollar paid in fees
   // is also a dollar that would have kept earning returns for decades, so the true
@@ -52,9 +62,21 @@ export default function Home() {
   })();
   const netGapLabel = "$" + (netGap.amount / 1000000).toFixed(1) + "m";
 
-  return (
-    <main>
-      {/* Hero */}
+  // Packaged for the landing teaser. Same numbers, passed down as plain data.
+  const hooks = {
+    netGapLabel,
+    lifetimeGapLabel,
+    retirementYears,
+    feeGap,
+    bottom20: netGap.bottom20,
+    top10: netGap.top10,
+    count: benchmark.count,
+  };
+
+  // The authenticated hero — identical to the Phase 1 hero. Rendered on the
+  // server and handed to AuthGate, which shows it above the tool once entered.
+  const hero = (
+    <>
       <header className="hero">
         <div className="wrap">
           <div className="eyebrow">Australian superannuation · official APRA data</div>
@@ -66,7 +88,6 @@ export default function Home() {
           <p className="hero-sub">
             Most Australians never check. Enter your details below and see exactly where your
             fund ranks on net returns and fees — against every MySuper product in the country.
-            No sign-up. No advice. Just the numbers.
           </p>
 
           <div className="hook-row">
@@ -104,22 +125,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Tool */}
-      <section className="wrap" style={{ paddingBottom: 80 }}>
-        <Tool />
-      </section>
-
-      {/* Footer */}
-      <footer className="foot">
-        <div className="wrap">
-          <p style={{ fontSize: 13, color: "var(--ink-faint)", lineHeight: 1.7 }}>
-            Data source: APRA Comprehensive Product Performance Package (MySuper Products), as at 30 June 2025,
-            licensed under CC BY 4.0. SuperLedger is an independent information tool and is not affiliated with APRA.
-            This is general information only and does not constitute financial product advice.
-          </p>
-        </div>
-      </footer>
-
       <style>{`
         .hero { padding: 80px 0 56px; border-bottom: 1px solid var(--rule); }
         .hero-title { font-size: clamp(34px, 6vw, 58px); margin: 20px 0 24px; max-width: 18ch; letter-spacing: -0.015em; }
@@ -137,15 +142,29 @@ export default function Home() {
         .hook-note { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 8px; line-height: 1.5; }
         @media (max-width: 860px) { .hook-row { grid-template-columns: 1fr; } }
         .hero-stats { display: flex; gap: 48px; margin-top: 44px; flex-wrap: wrap; }
-        .foot { border-top: 1px solid var(--rule); padding: 32px 0 60px; margin-top: 56px; }
         section.wrap { padding-top: 48px; }
         @media (max-width: 560px) {
           .hero-hook { grid-template-columns: 1fr; gap: 8px; padding: 22px 22px; }
           .hero-stats { gap: 28px; }
         }
       `}</style>
-    </main>
+    </>
   );
+
+  const footer = (
+    <footer className="foot">
+      <div className="wrap">
+        <p style={{ fontSize: 13, color: "var(--ink-faint)", lineHeight: 1.7 }}>
+          Data source: APRA Comprehensive Product Performance Package (MySuper Products), as at 30 June 2025,
+          licensed under CC BY 4.0. SuperLedger is an independent information tool and is not affiliated with APRA.
+          This is general information only and does not constitute financial product advice.
+        </p>
+      </div>
+      <style>{`.foot { border-top: 1px solid var(--rule); padding: 32px 0 60px; margin-top: 56px; }`}</style>
+    </footer>
+  );
+
+  return <AuthGate hooks={hooks} hero={hero} footer={footer} />;
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
