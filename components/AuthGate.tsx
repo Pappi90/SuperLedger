@@ -1,32 +1,25 @@
 "use client";
 
 /**
- * AuthGate.tsx — SuperLedger Phase 2 (VISUAL/UX SHELL ONLY)
+ * AuthGate.tsx — SuperLedger Phase 2 — REAL AUTHENTICATION
  *
- * ⚠️ THIS IS NOT REAL AUTHENTICATION ⚠️
- * This component decides which VIEW to show — the landing/signup page or the
- * full tool — based on a local in-memory React flag. It can be bypassed by
- * anyone (the "skip" button does exactly that, and dev tools would too), and
- * the tool's data is all public client-side JSON anyway. So this gate:
- *   • does NOT protect any data,
- *   • does NOT collect, store, or transmit anything,
- *   • is NOT a security boundary.
+ * Now backed by Supabase Auth. Checks for a live session:
+ *   • no session  → show the Landing/signup view
+ *   • session     → show the hero + full Tool + footer, with a sign-out control
  *
- * It exists so the post-login experience can be previewed and the front-door
- * UX agreed before the real backend is built. Real enforcement (server-side
- * auth + RLS + field encryption from the Privacy Architecture Blueprint) must
- * come first, along with the privacy + AFSL legal reviews. See blueprint
- * section 9 (build order). Until then, ship this behind the preview banner,
- * not as a live signup.
+ * This is a genuine boundary: the tool is gated on a real authenticated session,
+ * and the user's saved data is protected server-side by RLS + field encryption.
  *
- * The flag is deliberately NOT persisted to localStorage/cookies — refreshing
- * the page returns to the landing view, which keeps it obviously a preview and
- * avoids any impression of a real session.
+ * NOTE on what "gating" means here: the calculator's reference DATA (APRA funds
+ * etc.) is public JSON either way — gating it is a product choice, not secrecy.
+ * What's actually protected is the user's SAVED profile (balance/salary/age),
+ * which lives encrypted server-side and is never in the client bundle.
  */
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Landing from "./Landing";
 import Tool from "./Tool";
+import { createClient } from "@/lib/supabase/client";
 
 type HookData = {
   netGapLabel: string;
@@ -44,19 +37,52 @@ export default function AuthGate({
   footer,
 }: {
   hooks: HookData;
-  /** The server-rendered hero block, shown above the tool once "entered". */
   hero: ReactNode;
-  /** The server-rendered footer block. */
   footer: ReactNode;
 }) {
-  const [entered, setEntered] = useState(false);
+  const supabase = createClient();
+  const [status, setStatus] = useState<"loading" | "in" | "out">("loading");
+  const [alias, setAlias] = useState<string | null>(null);
 
-  if (!entered) {
-    return <Landing hooks={hooks} onEnter={() => setEntered(true)} />;
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!active) return;
+      setStatus(data.user ? "in" : "out");
+      setAlias((data.user?.user_metadata?.alias as string) ?? null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setStatus(session?.user ? "in" : "out");
+      setAlias((session?.user?.user_metadata?.alias as string) ?? null);
+    });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  if (status === "loading") {
+    return (
+      <main className="wrap" style={{ padding: "80px 28px", color: "var(--ink-faint)" }}>
+        Loading…
+      </main>
+    );
+  }
+
+  if (status === "out") {
+    return <Landing hooks={hooks} />;
   }
 
   return (
     <main>
+      <div className="wrap" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, paddingTop: 16 }}>
+        {alias && <span className="mono" style={{ fontSize: 13, color: "var(--ink-faint)" }}>@{alias}</span>}
+        <button
+          onClick={async () => { await supabase.auth.signOut(); }}
+          style={{ fontSize: 13, color: "var(--ink-soft)", background: "transparent", border: "1px solid var(--rule-strong)", borderRadius: 8, padding: "6px 12px" }}>
+          Sign out
+        </button>
+      </div>
       {hero}
       <section className="wrap" style={{ paddingBottom: 80 }}>
         <Tool />

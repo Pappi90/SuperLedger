@@ -10,6 +10,7 @@ import Drawdown from "./Drawdown";
 import FeeCurve from "./FeeCurve";
 import FundPicker from "./FundPicker";
 import LegalDisclaimer from "./LegalDisclaimer";
+import { useProfile, type ProfilePayload } from "@/lib/useProfile";
 
 const fmt = (n: number) => n.toLocaleString("en-AU");
 
@@ -31,6 +32,34 @@ export default function Tool() {
   const [overrideFee, setOverrideFee] = useState<number | null>(null);
   // Controls the in-tool "top-performing alternatives" directory panel.
   const [showDirectory, setShowDirectory] = useState(false);
+
+  // ---- Persistence: load saved profile, autosave, manual save --------------
+  // Sensitive fields (balance, salary, age) are encrypted server-side by the
+  // /api/profile route — this component only handles plain numbers. Non-sensitive
+  // settings ride along in `prefs`. If the user isn't logged in, this no-ops.
+  const profilePayload: ProfilePayload = useMemo(
+    () => ({
+      balance,
+      salary,
+      age,
+      prefs: { retireAge, extra, employerRate, inflation, gender, fundIdx },
+    }),
+    [balance, salary, age, retireAge, extra, employerRate, inflation, gender, fundIdx]
+  );
+
+  const { status: saveStatus, save } = useProfile(profilePayload, (p) => {
+    // Restore saved values when they load. Guard each in case of partial saves.
+    if (typeof p.balance === "number") setBalance(p.balance);
+    if (typeof p.salary === "number") setSalary(p.salary);
+    if (typeof p.age === "number") setAge(p.age);
+    const pr = p.prefs ?? {};
+    if (typeof pr.retireAge === "number") setRetireAge(pr.retireAge);
+    if (typeof pr.extra === "number") setExtra(pr.extra);
+    if (typeof pr.employerRate === "number") setEmployerRate(pr.employerRate);
+    if (typeof pr.inflation === "number") setInflation(pr.inflation);
+    if (pr.gender === "male" || pr.gender === "female" || pr.gender === "all") setGender(pr.gender);
+    if (typeof pr.fundIdx === "number") setFundIdx(pr.fundIdx);
+  });
 
   const selected = fundIdx >= 0 ? funds[fundIdx] : null;
   const ageFigures = selected ? fundFiguresAtAge(selected, age) : null;
@@ -196,6 +225,27 @@ export default function Tool() {
           </p>
         </div>
       )}
+
+      {/* Save bar — manual save + autosave status. Only meaningful when logged
+          in; the hook no-ops (status "idle") otherwise, so this stays quiet. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 24 }}>
+        <button
+          onClick={save}
+          disabled={saveStatus === "saving"}
+          style={{
+            fontSize: 14, fontWeight: 600, color: "var(--paper)", background: "var(--green)",
+            border: "none", borderRadius: 8, padding: "9px 18px",
+            opacity: saveStatus === "saving" ? 0.6 : 1,
+          }}>
+          {saveStatus === "saving" ? "Saving…" : "Save my comparison"}
+        </button>
+        <span style={{ fontSize: 13, color: saveStatus === "error" ? "var(--clay)" : "var(--ink-faint)" }}>
+          {saveStatus === "saved" && "Saved ✓"}
+          {saveStatus === "saving" && "Saving your figures securely…"}
+          {saveStatus === "error" && "Couldn't save — check you're logged in and try again."}
+          {saveStatus === "idle" && "Autosaves as you go. Your balance, salary and age are encrypted."}
+        </span>
+      </div>
 
       {/* Results */}
       <div className="results">

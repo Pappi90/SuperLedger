@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "SuperLedger — See how your super really stacks up",
   description:
-    "Compare your Australian super fund's net returns and fees against every MySuper product, using official APRA data. Free, no sign-up.",
+    "Compare your Australian super fund's net returns and fees against every MySuper product, using official APRA data. Free.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

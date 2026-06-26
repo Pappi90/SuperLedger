@@ -1,26 +1,25 @@
 "use client";
 
 /**
- * Landing.tsx — SuperLedger Phase 2 front door (VISUAL SHELL ONLY)
+ * Landing.tsx — SuperLedger Phase 2 front door — LIVE SIGNUP / LOGIN
  *
- * ⚠️ IMPORTANT — READ BEFORE WIRING TO A REAL BACKEND ⚠️
- * This is the unauthenticated landing + signup VIEW. It is presentation only.
- * The form does NOT submit anywhere, does NOT collect, store, or transmit any
- * data, and the "Create account" button only flips a local in-memory flag so
- * you can preview the post-login experience. There is NO real authentication
- * and NO real privacy protection here yet.
+ * Wired to Supabase Auth. Creates a real account (email + password + alias),
+ * or logs an existing user in. The alias is stored in the user's auth metadata.
  *
- * The "Security Vault" copy below describes the architecture from the
- * Privacy Architecture Blueprint (app-layer field encryption, key not held by
- * the DB). That architecture must actually be BUILT and the privacy + AFSL
- * legal reviews completed BEFORE this form is wired to collect real data.
- * Until then the copy is a promise the system does not yet keep — so this
- * view must not go live as a real signup. See the blueprint, section 9
- * (build order).
+ * The "Security Vault" copy is now backed by the real architecture: sensitive
+ * fields are encrypted server-side (lib/crypto.ts) with a key the database
+ * never holds, and the profile is private by default (no public leaderboard
+ * row until the user opts in inside the tool).
+ *
+ * ⚠️ BEFORE PROMOTING THIS PUBLICLY: the three legal artifacts (privacy policy,
+ * APP-5 collection notice, NDB plan) must be finalised by your privacy lawyer
+ * and live on the site. Auth + save are cleared to run; public promotion waits
+ * on those documents being published.
  */
 
 import { useState } from "react";
 import LegalDisclaimer from "./LegalDisclaimer";
+import { createClient } from "@/lib/supabase/client";
 
 type HookData = {
   netGapLabel: string;
@@ -32,28 +31,59 @@ type HookData = {
   count: number;
 };
 
-export default function Landing({
-  hooks,
-  onEnter,
-}: {
-  hooks: HookData;
-  onEnter: () => void;
-}) {
+export default function Landing({ hooks }: { hooks: HookData }) {
+  const supabase = createClient();
+  const [mode, setMode] = useState<"signup" | "login">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [alias, setAlias] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  // NOTE: no real validation/submission — preview only.
-  const canEnter = email.trim() !== "" && password.trim() !== "" && alias.trim() !== "";
+  const cleanAlias = alias.trim().replace(/^@+/, "");
+  const canSubmit =
+    mode === "login"
+      ? email.trim() !== "" && password !== ""
+      : email.trim() !== "" && password.length >= 10 && cleanAlias !== "";
+
+  async function handleSubmit() {
+    setError(null);
+    setNotice(null);
+    setBusy(true);
+    try {
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: { alias: cleanAlias },
+            emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
+          },
+        });
+        if (error) throw error;
+        // If email confirmation is ON in Supabase, the user must confirm first.
+        // If it's OFF, onAuthStateChange in AuthGate will flip straight to the tool.
+        setNotice(
+          "Account created. If you're asked to confirm your email, check your inbox — otherwise you're in."
+        );
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (error) throw error;
+        // AuthGate's listener will swap to the tool automatically.
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <main>
-      {/* Preview-mode banner — remove only once this is wired to the real,
-          reviewed backend per the blueprint build order. */}
-      <div className="preview-banner mono">
-        Preview build · not connected to a backend · no data is collected or stored
-      </div>
-
       <header className="lhero">
         <div className="wrap lhero-grid">
           {/* LEFT: pitch + hooks */}
@@ -116,10 +146,16 @@ export default function Landing({
             </div>
           </div>
 
-          {/* RIGHT: signup card */}
+          {/* RIGHT: signup / login card */}
           <div className="signup">
-            <h2 className="signup-head">Create your free account</h2>
-            <p className="signup-sub">Anonymous by design. Takes about a minute.</p>
+            <h2 className="signup-head">
+              {mode === "signup" ? "Create your free account" : "Welcome back"}
+            </h2>
+            <p className="signup-sub">
+              {mode === "signup"
+                ? "Anonymous by design. Takes about a minute."
+                : "Log in to see your saved comparison."}
+            </p>
 
             <div className="field">
               <label className="flabel">
@@ -131,9 +167,11 @@ export default function Landing({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                autoComplete="off"
+                autoComplete="email"
               />
-              <div className="fhint">Used only to log you in. Never shown to other users.</div>
+              {mode === "signup" && (
+                <div className="fhint">Used only to log you in. Never shown to other users.</div>
+              )}
             </div>
 
             <div className="field">
@@ -145,39 +183,55 @@ export default function Landing({
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 10 characters"
-                autoComplete="off"
+                placeholder={mode === "signup" ? "At least 10 characters" : "Your password"}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
               />
             </div>
 
-            <div className="field">
-              <label className="flabel">
-                Choose your anonymous alias <span className="req">*</span>
-              </label>
-              <div className="alias-wrap">
-                <span className="alias-at mono">@</span>
-                <input
-                  className="finput alias-input mono"
-                  type="text"
-                  value={alias}
-                  onChange={(e) => setAlias(e.target.value)}
-                  placeholder="SuperSaver88"
-                  autoComplete="off"
-                />
+            {mode === "signup" && (
+              <div className="field">
+                <label className="flabel">
+                  Choose your anonymous alias <span className="req">*</span>
+                </label>
+                <div className="alias-wrap">
+                  <span className="alias-at mono">@</span>
+                  <input
+                    className="finput alias-input mono"
+                    type="text"
+                    value={alias}
+                    onChange={(e) => setAlias(e.target.value)}
+                    placeholder="SuperSaver88"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="fhint">This is the only name other users will ever see.</div>
               </div>
-              <div className="fhint">This is the only name other users will ever see.</div>
-            </div>
+            )}
+
+            {error && (
+              <div role="alert" style={{ fontSize: 13, color: "var(--clay)", background: "var(--clay-soft)", border: "1px solid #e6c4b8", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+                {error}
+              </div>
+            )}
+            {notice && (
+              <div style={{ fontSize: 13, color: "var(--green)", background: "var(--green-soft)", border: "1px solid #cfe4d8", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+                {notice}
+              </div>
+            )}
 
             <button
               className="cta"
-              onClick={onEnter}
-              disabled={!canEnter}
-              title={canEnter ? "" : "Fill in all three fields to preview the tool"}
+              onClick={handleSubmit}
+              disabled={!canSubmit || busy}
+              title={canSubmit ? "" : mode === "signup" ? "Email, a 10+ character password, and an alias are required" : "Enter your email and password"}
             >
-              Create account &amp; see my ranking
+              {busy ? "Please wait…" : mode === "signup" ? "Create account & see my ranking" : "Log in"}
             </button>
-            <button className="cta-ghost" onClick={onEnter}>
-              Skip for now — just show me the tool (preview)
+            <button
+              className="cta-ghost"
+              onClick={() => { setMode(mode === "signup" ? "login" : "signup"); setError(null); setNotice(null); }}
+            >
+              {mode === "signup" ? "Already have an account? Log in" : "Need an account? Sign up"}
             </button>
 
             {/* SECURITY VAULT — honest copy, backed by the blueprint architecture.
