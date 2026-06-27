@@ -47,6 +47,19 @@ export default function AuthGate({
   const [supabase] = useState(() => createClient());
   const [status, setStatus] = useState<"loading" | "in" | "out">("loading");
   const [alias, setAlias] = useState<string | null>(null);
+  const [welcome, setWelcome] = useState(false);
+
+  // If we arrived here straight from a successful email-confirmation link
+  // (app/auth/callback redirects to /?welcome=1), show a one-time confirmation
+  // banner, then strip the param so a refresh doesn't repeat it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("welcome") === "1") {
+      setWelcome(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     if (!supabase) { setStatus("out"); return; }
@@ -90,6 +103,19 @@ export default function AuthGate({
 
   return (
     <main>
+      {welcome && (
+        <div className="wrap" style={{ paddingTop: 16 }}>
+          <div role="status" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: 14, color: "var(--green)", background: "var(--green-soft)", border: "1px solid #cfe4d8", borderRadius: 10, padding: "12px 14px" }}>
+            <span>Your email is confirmed — you&apos;re all set and logged in.</span>
+            <button
+              onClick={() => setWelcome(false)}
+              aria-label="Dismiss"
+              style={{ flex: "0 0 auto", fontSize: 13, color: "var(--ink-soft)", background: "transparent", border: "1px solid var(--rule-strong)", borderRadius: 8, padding: "4px 10px" }}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       <div className="wrap" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, paddingTop: 16 }}>
         {alias && <span className="mono" style={{ fontSize: 13, color: "var(--ink-faint)" }}>@{alias}</span>}
         <button

@@ -17,7 +17,7 @@
  * on those documents being published.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LegalDisclaimer from "./LegalDisclaimer";
 import { createClient } from "@/lib/supabase/client";
 
@@ -42,6 +42,25 @@ export default function Landing({ hooks }: { hooks: HookData }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Read the outcome of an email-confirmation link (set by app/auth/callback).
+  // ?confirmed=1  → email verified but not logged in on this device → ask to log in
+  // ?auth_error=… → expired/invalid link → show the message
+  // We strip the query string afterwards so a refresh doesn't re-show the banner.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get("auth_error");
+    if (params.get("confirmed") === "1") {
+      setMode("login");
+      setNotice("Your email is confirmed. Log in below to continue.");
+    } else if (authError) {
+      setError(authError);
+    }
+    if (params.has("confirmed") || params.has("auth_error") || params.has("welcome")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const cleanAlias = alias.trim().replace(/^@+/, "");
   const canSubmit =
