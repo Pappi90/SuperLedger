@@ -111,6 +111,40 @@ export function fundFees(): number[] {
     .filter((v): v is number => v !== null);
 }
 
+// Median and top-decile (90th percentile) net return across all MySuper
+// products, for a chosen period, computed live from the canonical APRA dataset
+// so the SMSF hurdle figures never drift from the rest of the tool. Lifecycle
+// funds are resolved to the stage matching `age` (same approach as the
+// percentile comparisons elsewhere). Returns are in PERCENT units (e.g. 6.83).
+export type NetReturnPeriod = "net10yr" | "net7yr" | "net5yr" | "net3yr";
+
+export function netReturnStats(period: NetReturnPeriod, age = 40): {
+  median: number; p90: number; count: number;
+} {
+  const vals = funds
+    .map((f) => {
+      const src = (f.strategy === "Lifecycle" && f.stages && f.stages.length > 0)
+        ? (f.stages.find((s) => age >= s.ageFrom && age <= s.ageTo) ?? f.stages[0])
+        : null;
+      return src ? src[period] : f[period];
+    })
+    .filter((v): v is number => v !== null && v !== undefined);
+
+  const sorted = [...vals].sort((a, b) => a - b);
+  const n = sorted.length;
+  const median = n === 0 ? 0
+    : n % 2 ? sorted[(n - 1) / 2]
+    : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+  const pct = (p: number) => {
+    if (n === 0) return 0;
+    const k = (n - 1) * p;
+    const lo = Math.floor(k);
+    const hi = Math.min(lo + 1, n - 1);
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (k - lo);
+  };
+  return { median, p90: pct(0.90), count: n };
+}
+
 // Compound projection: balance forward with annual net return + monthly contributions
 export function project(
   balance: number,

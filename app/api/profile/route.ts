@@ -64,15 +64,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const row = {
-    user_id: user.id,
-    email_hash: user.email ? hashEmail(user.email) : null,
-    enc_balance: encryptValue(body.balance ?? null),
-    enc_salary: encryptValue(body.salary ?? null),
-    enc_age: encryptValue(body.age ?? null),
-    prefs: body.prefs ?? {},
-    updated_at: new Date().toISOString(),
-  };
+  const row = (() => {
+    try {
+      return {
+        user_id: user.id,
+        email_hash: user.email ? hashEmail(user.email) : null,
+        enc_balance: encryptValue(body.balance ?? null),
+        enc_salary: encryptValue(body.salary ?? null),
+        enc_age: encryptValue(body.age ?? null),
+        prefs: body.prefs ?? {},
+        updated_at: new Date().toISOString(),
+      };
+    } catch (e) {
+      return { __error: e instanceof Error ? e.message : String(e) } as const;
+    }
+  })();
+
+  // encryptValue throws (rather than store plaintext) when ENCRYPTION_MASTER_KEY
+  // is missing or invalid in the server runtime. Surface that as a clear,
+  // labelled error instead of an opaque 500, so it's obvious it's a config issue
+  // (key not attached to this Vercel project / wrong scope) and not a DB fault.
+  if ("__error" in row) {
+    return NextResponse.json(
+      { error: "encryption_misconfigured", detail: row.__error },
+      { status: 500 }
+    );
+  }
 
   const { error } = await supabase
     .from("private_profile")

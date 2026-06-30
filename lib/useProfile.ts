@@ -44,7 +44,16 @@ export function useProfile(payload: ProfilePayload, onLoaded: (p: ProfilePayload
       try {
         const res = await fetch("/api/profile");
         if (res.status === 401) { if (active) setStatus("idle"); return; }
-        if (!res.ok) { if (active) setStatus("error"); return; }
+        if (!res.ok) {
+          let detail = "";
+          try {
+            const j = await res.json();
+            detail = j?.error ? `${j.error}${j.detail ? ": " + j.detail : ""}` : "";
+          } catch { /* non-JSON response */ }
+          console.error(`[SuperLedger] load failed (${res.status})`, detail);
+          if (active) setStatus("error");
+          return;
+        }
         const json = await res.json();
         if (active && json.profile) {
           onLoaded(json.profile as ProfilePayload);
@@ -68,7 +77,19 @@ export function useProfile(payload: ProfilePayload, onLoaded: (p: ProfilePayload
         body: JSON.stringify(payload),
       });
       if (res.status === 401) { setStatus("idle"); return; }
-      if (!res.ok) { setStatus("error"); return; }
+      if (!res.ok) {
+        // Surface the real reason in the console so a failed save is diagnosable
+        // (e.g. "encryption_misconfigured" → key not set, vs a Postgres message
+        // → DB/RLS issue). The UI keeps the friendly banner.
+        let detail = "";
+        try {
+          const j = await res.json();
+          detail = j?.error ? `${j.error}${j.detail ? ": " + j.detail : ""}` : "";
+        } catch { /* non-JSON response */ }
+        console.error(`[SuperLedger] save failed (${res.status})`, detail);
+        setStatus("error");
+        return;
+      }
       setStatus("saved");
       setTimeout(() => setStatus((s) => (s === "saved" ? "idle" : s)), 2000);
     } catch {
