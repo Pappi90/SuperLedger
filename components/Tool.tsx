@@ -12,6 +12,7 @@ import FundPicker from "./FundPicker";
 import LegalDisclaimer from "./LegalDisclaimer";
 import Field from "./Field";
 import SMSF from "./SMSF";
+import SuperHealthRings from "./SuperHealthRings";
 import { useProfile, type ProfilePayload } from "@/lib/useProfile";
 
 export default function Tool() {
@@ -249,6 +250,15 @@ export default function Tool() {
 
       {/* Results */}
       <div className="results">
+        <SuperHealthRings
+          balance={balance}
+          userFeePct={myFee}
+          feeScore={feePct}
+          userNetReturn={myNetReturn}
+          perfScore={netPct}
+          projectedTodaysDollars={projectedTodaysDollars}
+        />
+
         <div className="card">
           <h3 style={{ fontSize: 19, marginBottom: 6 }}>How you compare</h3>
           <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 22 }}>
