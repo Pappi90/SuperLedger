@@ -25,6 +25,7 @@ export type HealthRing = {
   key: RingKey;
   title: string;
   score: number;     // 0-100
+  scored: boolean;   // whether this ring contributes to the composite score
   primary: string;   // headline figure
   compare: string;   // neutral comparison sentence
   note: string;      // clarifier on what this ring means / how it relates to the others
@@ -38,11 +39,14 @@ export type SuperHealth = {
   weakest: HealthRing;
 };
 
-// Relative weight of each ring in the overall score. Tune freely.
+// Relative weight of each ring in the overall score. Fees are intentionally 0:
+// they're already reflected in net return (the performance ring) and in the
+// readiness projection (which uses net return), so weighting fees here would
+// double-count them. The fee ring stays visible for context, just unscored.
 export const HEALTH_WEIGHTS: Record<RingKey, number> = {
-  fees: 0.3,
-  performance: 0.35,
-  readiness: 0.35,
+  fees: 0,
+  performance: 0.5,
+  readiness: 0.5,
 };
 
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
@@ -66,12 +70,13 @@ export function computeSuperHealth(input: SuperHealthInput): SuperHealth {
       key: "fees",
       title: "Fee health",
       score: clamp(Math.round(feeScore)),
+      scored: HEALTH_WEIGHTS.fees > 0,
       primary: `${formatFull(userFeeAnnual)} / year on ${formatFull(balance)}`,
       compare: `The median comparable fund charges ${formatFull(
         peerFeeAnnual
       )}. Your fees rank ahead of about ${Math.round(feeScore)}% of similar options.`,
-      note: "What you're charged each year, whatever markets do.",
-      aria: `Fee health, ${Math.round(feeScore)} out of 100. You pay ${formatFull(
+      note: "Shown for context — already reflected in your net returns, so it isn't counted again in the score.",
+      aria: `Fee health, ${Math.round(feeScore)} out of 100, shown for context and not counted in the overall score. You pay ${formatFull(
         userFeeAnnual
       )} a year, against a median comparable fund of ${formatFull(peerFeeAnnual)}.`,
     },
@@ -79,6 +84,7 @@ export function computeSuperHealth(input: SuperHealthInput): SuperHealth {
       key: "performance",
       title: "Performance health",
       score: clamp(Math.round(perfScore)),
+      scored: HEALTH_WEIGHTS.performance > 0,
       primary: `${userNetReturn.toFixed(1)}% p.a. · net, after all fees`,
       compare: `The median comparable option returned ${peerNetReturn.toFixed(
         1
@@ -92,6 +98,7 @@ export function computeSuperHealth(input: SuperHealthInput): SuperHealth {
       key: "readiness",
       title: "Retirement readiness",
       score: readinessScore,
+      scored: HEALTH_WEIGHTS.readiness > 0,
       primary: `Tracking toward ~${formatFull(projectedTodaysDollars)} (today's dollars)`,
       compare: `Compared with the ASFA "comfortable" single benchmark of ${formatFull(
         comfortableBenchmark
@@ -109,7 +116,10 @@ export function computeSuperHealth(input: SuperHealthInput): SuperHealth {
       rings[2].score * HEALTH_WEIGHTS.readiness
   );
 
-  const weakest = rings.reduce((a, b) => (b.score < a.score ? b : a));
+  // Biggest opportunity is chosen only among rings that count toward the score,
+  // so the headline insight stays consistent with what the score measures.
+  const scoredRings = rings.filter((r) => r.scored);
+  const weakest = scoredRings.reduce((a, b) => (b.score < a.score ? b : a));
   const band =
     score >= 80 ? "Strong" : score >= 65 ? "Solid" : score >= 50 ? "Building" : "Getting started";
 

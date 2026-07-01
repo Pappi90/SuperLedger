@@ -90,6 +90,11 @@ export default function SuperHealthRings(input: SuperHealthInput) {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 14 }}>
                 <span style={{ width: 9, height: 9, borderRadius: "50%", background: s.stroke, display: "inline-block" }} />
                 <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{ring.title}</span>
+                {!ring.scored && (
+                  <span style={{ fontSize: 10, color: "var(--ink-faint)", border: "1px solid var(--rule)", borderRadius: 999, padding: "1px 7px" }}>
+                    for context
+                  </span>
+                )}
               </div>
               <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
                 <Ring score={ring.score} stroke={s.stroke} animate={animate} aria={ring.aria} />
@@ -115,9 +120,9 @@ export default function SuperHealthRings(input: SuperHealthInput) {
               {data.band}
             </span>
           </div>
-          {/* Composite bar, segmented in the three ring colours */}
+          {/* Composite bar — only the rings that count toward the score */}
           <div style={{ display: "flex", gap: 3, marginTop: 16, height: 8 }}>
-            {data.rings.map((ring) => (
+            {data.rings.filter((r) => r.scored).map((ring) => (
               <div key={ring.key} style={{ flex: 1, background: "var(--paper)", borderRadius: 4, overflow: "hidden" }}>
                 <div style={{
                   height: "100%", width: `${animate ? scoreVal >= 1 ? ring.score : 0 : ring.score}%`,
@@ -127,7 +132,8 @@ export default function SuperHealthRings(input: SuperHealthInput) {
             ))}
           </div>
           <p style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 12, lineHeight: 1.55 }}>
-            A combined view across fees, returns after fees, and retirement readiness.
+            Based on your returns after fees and retirement readiness. Fees are shown separately —
+            their effect already sits inside both, so they aren&apos;t counted twice.
           </p>
         </div>
 
