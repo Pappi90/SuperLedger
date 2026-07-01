@@ -21,6 +21,9 @@ export type SavedPrefs = {
   inflation?: number;
   gender?: "male" | "female" | "all";
   fundIdx?: number;
+  smsfGrossReturn?: number;
+  smsfRunningCost?: number;
+  smsfInvestCost?: number;
 };
 
 export type ProfilePayload = {

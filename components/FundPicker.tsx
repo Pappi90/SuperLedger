@@ -27,7 +27,10 @@ export default function FundPicker({ value, onChange }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
 
   // Label shown in the input when a fund is selected and the box is closed
-  const selectedLabel = value >= 0 ? `${funds[value].fund} — ${funds[value].product}` : "";
+  const selectedLabel =
+    value >= 0 ? `${funds[value].fund} — ${funds[value].product}`
+    : value === -2 ? "Self-managed fund (SMSF)"
+    : "";
 
   // Filter funds by query (matches fund name or product, with alias expansion)
   const matches = useMemo(() => {
@@ -63,13 +66,14 @@ export default function FundPicker({ value, onChange }: Props) {
 
   function onKeyDown(e: React.KeyboardEvent) {
     if (!open && (e.key === "ArrowDown" || e.key === "Enter")) { setOpen(true); return; }
-    if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((h) => Math.min(h + 1, matches.length)); }
+    if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((h) => Math.min(h + 1, matches.length + 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((h) => Math.max(h - 1, 0)); }
     else if (e.key === "Enter") {
       e.preventDefault();
       if (highlight === 0 && query === "") return;
-      // index 0 is always "manual"; results follow
+      // rows after the matches are: [matches.length] = manual, [matches.length+1] = SMSF
       if (highlight === matches.length) pick(-1);
+      else if (highlight === matches.length + 1) pick(-2);
       else if (matches[highlight]) pick(matches[highlight].i);
     } else if (e.key === "Escape") setOpen(false);
   }
@@ -140,6 +144,23 @@ export default function FundPicker({ value, onChange }: Props) {
             }}
           >
             Not sure / enter my numbers manually
+          </button>
+          {/* Self-managed (SMSF) option */}
+          <button
+            role="option"
+            aria-selected={highlight === matches.length + 1}
+            onMouseEnter={() => setHighlight(matches.length + 1)}
+            onClick={() => pick(-2)}
+            style={{
+              display: "block", width: "100%", textAlign: "left", border: "none",
+              borderTop: "1px solid var(--rule)",
+              padding: "10px 14px", fontSize: 14, cursor: "pointer",
+              background: highlight === matches.length + 1 ? "var(--paper)" : "transparent",
+              color: "var(--ink-soft)",
+            }}
+          >
+            <span style={{ fontWeight: 500, color: "var(--ink)" }}>I have a self-managed fund (SMSF)</span>
+            <span style={{ color: "var(--ink-faint)", fontSize: 13 }}> — enter your return &amp; costs</span>
           </button>
         </div>
       )}

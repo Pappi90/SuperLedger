@@ -31,6 +31,12 @@ export default function Tool() {
   // Required so every assumption stays editable — see ASIC note below.
   const [overrideReturn, setOverrideReturn] = useState<number | null>(null);
   const [overrideFee, setOverrideFee] = useState<number | null>(null);
+  // Self-managed (SMSF) inputs — used when fundIdx === -2. The member supplies
+  // their investment return and their costs; the tool derives an effective fee %
+  // and a net return so an SMSF ranks against MySuper products on the same basis.
+  const [smsfGrossReturn, setSmsfGrossReturn] = useState(7.0);
+  const [smsfRunningCost, setSmsfRunningCost] = useState(4600);
+  const [smsfInvestCost, setSmsfInvestCost] = useState(0.2);
   // Controls the in-tool "top-performing alternatives" directory panel.
   const [showDirectory, setShowDirectory] = useState(false);
 
@@ -43,9 +49,9 @@ export default function Tool() {
       balance,
       salary,
       age,
-      prefs: { retireAge, extra, employerRate, inflation, gender, fundIdx },
+      prefs: { retireAge, extra, employerRate, inflation, gender, fundIdx, smsfGrossReturn, smsfRunningCost, smsfInvestCost },
     }),
-    [balance, salary, age, retireAge, extra, employerRate, inflation, gender, fundIdx]
+    [balance, salary, age, retireAge, extra, employerRate, inflation, gender, fundIdx, smsfGrossReturn, smsfRunningCost, smsfInvestCost]
   );
 
   const { status: saveStatus, save } = useProfile(profilePayload, (p) => {
@@ -60,6 +66,9 @@ export default function Tool() {
     if (typeof pr.inflation === "number") setInflation(pr.inflation);
     if (pr.gender === "male" || pr.gender === "female" || pr.gender === "all") setGender(pr.gender);
     if (typeof pr.fundIdx === "number") setFundIdx(pr.fundIdx);
+    if (typeof pr.smsfGrossReturn === "number") setSmsfGrossReturn(pr.smsfGrossReturn);
+    if (typeof pr.smsfRunningCost === "number") setSmsfRunningCost(pr.smsfRunningCost);
+    if (typeof pr.smsfInvestCost === "number") setSmsfInvestCost(pr.smsfInvestCost);
   });
 
   const selected = fundIdx >= 0 ? funds[fundIdx] : null;
@@ -76,22 +85,28 @@ export default function Tool() {
   const apraFee50k = ageFigures?.totalFee50k ?? selected?.totalFee50k ?? null;
 
   // The figure actually used: user override if set, else APRA, else manual entry.
-  const myReturn = overrideReturn ?? apraReturn ?? manualReturn;
-  const myFee50k = overrideFee ?? apraFee50k ?? manualFee;
+  // In SMSF mode the member's fixed-dollar running cost + investment-cost % become
+  // an effective all-in fee %, and net return = their investment return minus it.
+  const isSMSF = fundIdx === -2;
+  const smsfEffectiveFee = (balance > 0 ? (smsfRunningCost / balance) * 100 : 0) + smsfInvestCost;
+
+  const myReturn = isSMSF ? smsfGrossReturn : (overrideReturn ?? apraReturn ?? manualReturn);
+  const myFee50k = isSMSF ? smsfEffectiveFee : (overrideFee ?? apraFee50k ?? manualFee);
 
   // Fee at the user's actual balance tier (fairer to both user and fund), with
   // the $50k figure kept for the percentile ranking so all funds compare consistently.
   // When the user has overridden the fee, honour the override across all tiers.
   const feeCurve = ageFigures?.feeCurve ?? null;
-  const balanceFee = feeCurve && overrideFee == null ? feeAtBalance(feeCurve, balance) : null;
-  const myFee = balanceFee?.fee ?? myFee50k;
-  const myFeeTier = balanceFee?.tier ?? 50000;
+  const balanceFee = feeCurve && overrideFee == null && !isSMSF ? feeAtBalance(feeCurve, balance) : null;
+  const myFee = isSMSF ? smsfEffectiveFee : (balanceFee?.fee ?? myFee50k);
+  const myFeeTier = balanceFee?.tier ?? (isSMSF ? balance : 50000);
   // All-in net return (after investment AND admin fees). For a manually-entered
   // fund we approximate it as the entered return minus the admin portion of the fee.
   // When the user overrides return and/or fee, the net follows their assumptions.
   const apraNet = ageFigures?.net5yr ?? selected?.net5yr ?? null;
-  const myNetReturn =
-    overrideReturn != null || overrideFee != null
+  const myNetReturn = isSMSF
+    ? Math.max(0, smsfGrossReturn - smsfEffectiveFee)
+    : overrideReturn != null || overrideFee != null
       ? Math.max(0, myReturn - (overrideFee ?? 0))
       : apraNet ?? Math.max(0, manualReturn - manualFee);
 
@@ -189,7 +204,47 @@ export default function Tool() {
         <FundPicker value={fundIdx} onChange={setFundIdx} />
       </div>
 
-      {fundIdx === -1 ? (
+      {isSMSF ? (
+        <div style={{ marginTop: 16 }}>
+          <div className="grid-inputs">
+            <Field label="Your SMSF investment return %" value={smsfGrossReturn} onChange={setSmsfGrossReturn}
+              min={0} max={15} step={0.1} suffix="%"
+              tooltip="Your fund's investment return per year, before running costs. Enter what your portfolio earned — the tool subtracts your costs below to get a net figure comparable to APRA funds." />
+            <Field label="Annual running cost" value={smsfRunningCost} onChange={setSmsfRunningCost}
+              min={500} max={15000} step={100} money allowOver
+              tooltip="Audit, administration and the ATO supervisory levy. The presets below are based on ATO median operating expenses and current administrator pricing." />
+            <Field label="Investment cost %" value={smsfInvestCost} onChange={setSmsfInvestCost}
+              min={0} max={2} step={0.05} suffix="%"
+              tooltip="Brokerage and ETF or managed-fund MERs as a % of your balance. Index ETFs are typically around 0.1–0.2%." />
+          </div>
+
+          <div style={{ display: "inline-flex", border: "1px solid var(--rule-strong)", borderRadius: 8, overflow: "hidden", marginTop: 12 }}>
+            {([["Lean", 1500], ["Typical", 4600], ["Full-service", 9300]] as [string, number][]).map(([lbl, val], i) => (
+              <button key={lbl} onClick={() => setSmsfRunningCost(val)}
+                style={{
+                  padding: "6px 14px", fontSize: 13, border: "none",
+                  borderLeft: i > 0 ? "1px solid var(--rule-strong)" : "none",
+                  background: smsfRunningCost === val ? "var(--ink)" : "transparent",
+                  color: smsfRunningCost === val ? "var(--paper)" : "var(--ink-soft)", cursor: "pointer",
+                }}>
+                {lbl} <span style={{ opacity: 0.7 }}>${val.toLocaleString("en-AU")}</span>
+              </button>
+            ))}
+          </div>
+
+          <p style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 14, lineHeight: 1.55 }}>
+            At <strong className="mono">{formatFull(balance)}</strong>, your <strong className="mono">{formatFull(smsfRunningCost)}</strong> running
+            cost plus <strong className="mono">{smsfInvestCost.toFixed(2)}%</strong> investment cost is an effective{" "}
+            <strong className="mono">{smsfEffectiveFee.toFixed(2)}%</strong> a year. Net return used for the comparison:{" "}
+            <strong className="mono">{myNetReturn.toFixed(1)}%</strong>.
+          </p>
+          <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 8, lineHeight: 1.5 }}>
+            Your net return and effective cost are ranked against MySuper products. An SMSF&apos;s risk and asset mix can
+            differ from a MySuper option, so this is a factual comparison, not a recommendation. Benchmark fees are measured
+            at a $50,000 representative balance. General information only.
+          </p>
+        </div>
+      ) : fundIdx === -1 ? (
         <div className="grid-inputs" style={{ marginTop: 16 }}>
           <Field label="Your fund's 5yr return %" value={manualReturn} onChange={setManualReturn} min={3} max={14} step={0.1} suffix="%" />
           <Field label="Your annual fee %" value={manualFee} onChange={setManualFee} min={0.05} max={2} step={0.05} suffix="%" />
